@@ -1,0 +1,80 @@
+[
+    {
+        "id": 1,
+        "username": "myusername",
+        "role" : "Nurse",
+        "allow_access": [
+            {
+            "access": "Patient",
+            "access_link" : "/patient"
+            },
+            {
+            "access": "Inventory",
+            "access_link" : "/inventory"
+            }
+        ],
+        "profile_image_directory" : "Profile-Icon.png",
+        "inventory_list" : [
+            {
+                "id": 1,
+                "name": "Inventory 1",
+                "count": 25,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 2,
+                "name": "Inventory 2",
+                "count": 30,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 3,
+                "name": "Inventory 3",
+                "count": 35,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 4,
+                "name": "Inventory 4",
+                "count": 40,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 5,
+                "name": "Inventory 5",
+                "count": 45,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 6,
+                "name": "Inventory 6",
+                "count": 50,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 7,
+                "name": "Inventory 7",
+                "count": 55,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 8,
+                "name": "Inventory 8",
+                "count": 60,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 9,
+                "name": "Inventory 9",
+                "count": 65,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 10,
+                "name": "Inventory 10",
+                "count": 70,
+                "image": "Profile-Icon.png"
+            }
+        ]
+    }
+]

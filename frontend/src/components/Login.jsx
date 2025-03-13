@@ -17,7 +17,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: "",  // Default test email
+    username: "",  // Default test username
     password: ""     // Default test password
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -46,8 +46,7 @@ const Login = () => {
         if (data.access_token) {
           // Store token in localStorage
           localStorage.setItem("token", data.access_token);
-          // Redirect to the patient-registration page after successful login
-          navigate("/patient-registration");
+          navigate("/main");
         } else {
           alert("Login failed");
         }
@@ -71,9 +70,9 @@ const Login = () => {
       </div>
         <TextField
           required
-          name="email"
-          label="Email"
-          value={formData.email}
+          name="username"
+          label="Username"
+          value={formData.username}
           onChange={handleChange}
           sx={{ width: '100%', margin: '1rem' }}
           variant="filled"

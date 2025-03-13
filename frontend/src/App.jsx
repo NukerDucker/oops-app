@@ -1,6 +1,10 @@
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import React from "react";
 import Login from './components/Login.jsx';
+import Inventory from './components/Inventory.jsx';
+import Main from './components/Main.jsx';
+import Patient from './components/Patient.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App() {
   return (
@@ -11,8 +15,10 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-      
-              </Routes>
+          <Route path="/inventory" element={ <ProtectedRoute> <Inventory /> </ProtectedRoute>}/>
+          <Route path="/main" element={<ProtectedRoute> <Main /> </ProtectedRoute>} />
+          <Route path="/patient" element={<ProtectedRoute> <Patient /> </ProtectedRoute>} />
+      </Routes>
     </Router>
     </>
   );

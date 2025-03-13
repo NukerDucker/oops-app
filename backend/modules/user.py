@@ -1,36 +1,55 @@
-from typing import Literal, Tuple
+from typing import Literal, Optional, Tuple
 from .base_entity import BaseEntity
 
-UserType = Literal["doctor", "receptionist"]
+UserType = Literal["user", "admin", "doctor", "receptionist"]
+
+class AccessPermission:
+    def __init__(self, access, access_link):
+        self.access = access
+        self.access_link = access_link
+        
+    def to_dict(self):
+        return {
+            "access": self.access,
+            "access_link": self.access_link
+        }
 
 class User(BaseEntity):
     """Base user class for system authentication and role management."""
     
     def __init__(
         self,
-        name: str,
-        username: str,
-        password: str,
-        user_type: UserType
+        id: int,
+        username: str, 
+        password_hash: str,
+        user_type: UserType = "user",
+        email: Optional[str] = None
     ) -> None:
         """Initialize a new User.
         
         Args:
-            name: The user's full name
+            id: The user's unique identifier
             username: The user's login username
-            password: The user's password
-            user_type: The type of user (doctor/receptionist)
+            password_hash: The user's hashed password
+            user_type: The type of user (defaults to "user")
+            email: The user's email address (optional)
         """
-        super().__init__()  # Generate the unique ID using the base class
-        self._name = name
+        # Use provided ID instead of generating one from BaseEntity
+        self._id = id
         self._username = username
-        self._password = password
+        self._password_hash = password_hash
         self._user_type = user_type
+        self._email = email
+        self._profile_image_directory = "Profile-Icon.png"
+        self._access_permissions = []
+        self._tasks = []
+        self._weekly_tasks = []
+        self._emergency_tasks = []
     
     @property
-    def name(self) -> str:
-        """Get the user's name."""
-        return self._name
+    def id(self) -> int:
+        """Get the user's ID."""
+        return self._id
     
     @property
     def username(self) -> str:
@@ -38,26 +57,42 @@ class User(BaseEntity):
         return self._username
     
     @property
+    def password_hash(self) -> str:
+        """Get the user's hashed password (should only be used for authentication)."""
+        return self._password_hash
+    
+    @property
     def user_type(self) -> UserType:
         """Get the user's type."""
         return self._user_type
     
     @property
-    def password(self) -> str:
-        """Get the user's password (should only be used for authentication)."""
-        return self._password
+    def email(self) -> Optional[str]:
+        """Get the user's email."""
+        return self._email
     
-    def change_password(self, old_password: str, new_password: str) -> Tuple[bool, str]:
-        """Change the user's password.
+    def add_access_permission(self, access, access_link):
+        self._access_permissions.append(AccessPermission(access, access_link))
         
-        Args:
-            old_password: The current password for verification
-            new_password: The new password to set
-            
-        Returns:
-            A tuple of (success, message)
-        """
-        if old_password == self._password:
-            self._password = new_password
-            return True, "Success: Password changed"
-        return False, "Error: Invalid password"
+    def add_task(self, task):
+        self._tasks.append(task)
+        
+    def add_weekly_task(self, task):
+        self._weekly_tasks.append(task)
+        
+    def add_emergency_task(self, task):
+        self._emergency_tasks.append(task)
+        
+    def to_dict(self) -> dict:
+        """Convert user to dictionary representation (for API responses)."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "user_type": self.user_type,
+            "allow_access": [perm.to_dict() for perm in self._access_permissions],
+            "profile_image_directory": self._profile_image_directory,
+            "tasks": [task.to_dict() for task in self._tasks],
+            "weekly_tasks": [task.to_dict() for task in self._weekly_tasks],
+            "emergency_tasks": [task.to_dict() for task in self._emergency_tasks]
+        }

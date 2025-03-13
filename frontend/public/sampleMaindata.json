@@ -1,0 +1,57 @@
+[
+    {
+        "id": 1,
+        "username": "myusername",
+        "email": "myemail@email.com",
+        "role" : "Nurse",
+        "allow_access": [
+            {
+            "access": "Patient",
+            "access_link" : "/patient"
+            },
+            {
+            "access": "Inventory",
+            "access_link" : "/inventory"
+            }
+        ],
+        "profile_image_directory" : "Profile-Icon.png",
+        "tasks" : [
+            {
+                "id": 1,
+                "title": "Task 1",
+                "description": "This is task 1"
+            },
+            {
+                "id": 2,
+                "title": "Task 2",
+                "description": "This is task 2"
+            },
+            {
+                "id": 3,
+                "title": "Task 3",
+                "description": "This is task 3"
+            }
+        ],
+        "weekly_tasks" : [
+            {
+                "id": 1,
+                "title": "Weekly Task 1",
+                "description": "This is weekly task 1"
+            },
+            {
+                "id": 2,
+                "title": "Weekly Task 2",
+                "description": "This is weekly task 2"
+            }
+        ],
+        
+        "emergency_tasks" : [
+            {
+                "id": 1,
+                "title": "Emergency Task 1",
+                "description": "This is emergency task 1"
+            }
+        ]
+        
+    }
+]

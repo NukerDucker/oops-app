@@ -1,0 +1,81 @@
+[
+    {
+        "id": 1,
+        "username": "myusername",
+        "email": "myemail@email.com",
+        "role" : "Nurse",
+        "allow_access": [
+            {
+            "access": "Patient",
+            "access_link" : "/patient"
+            },
+            {
+            "access": "Inventory",
+            "access_link" : "/inventory"
+            }
+        ],
+        "profile_image_directory" : "Profile-Icon.png",
+        "patient_list" : [
+            {
+                "id": 1,
+                "name": "Patient 1",
+                "age": 25,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 2,
+                "name": "Patient 2",
+                "age": 30,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 3,
+                "name": "Patient 3",
+                "age": 35,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 4,
+                "name": "Patient 4",
+                "age": 40,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 5,
+                "name": "Patient 5",
+                "age": 45,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 6,
+                "name": "Patient 6",
+                "age": 50,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 7,
+                "name": "Patient 7",
+                "age": 55,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 8,
+                "name": "Patient 8",
+                "age": 60,
+                "image": "Profile-Icon.png"
+            }, 
+            {
+                "id": 9,
+                "name": "Patient 9",
+                "age": 65,
+                "image": "Profile-Icon.png"
+            },
+            {
+                "id": 10,
+                "name": "Patient 10",
+                "age": 70,
+                "image": "Profile-Icon.png"
+            }
+        ]
+    }
+]
