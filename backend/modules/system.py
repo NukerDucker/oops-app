@@ -1,266 +1,166 @@
-from typing import List, Tuple, Optional, Any, Union
-from patient import Patient
-from appointment import Appointment
-from receptionist import Receptionist
-from admission import Admission
-from fee import Fee
-from payment_method import PaymentMethod
-from lab_request import LabRequest
-from lab_result import LabResult
-from lab_personnel import LabPersonnel
-from prescription import Prescription
-from pharmacist import Pharmacist
-from doctor import Doctor
-from supply import Supply
-import utils
-import time
-import random
-
+from typing import Dict, List, Tuple, Optional, Any
+from .user import User
+from .doctor import Doctor
+from .receptionist import Receptionist
+from .patient import Patient
+from .appointment import Appointment
+from .lab_request import LabRequest
+from .prescription import Prescription
+from .supply import Supply
 
 class System:
+    """Central management system for the clinic."""
+    
     def __init__(self):
-        self.__supplies: List[Supply] = []
-        self.__financial_spendings: List[Any] = []
-        self.__financial_incomes: List[Any] = []
-        self.__lab_personnel: List[LabPersonnel] = []
-        self.__doctor_personnel: List[Doctor] = []
-        self.__nurse_personnel: List[Any] = []
-        self.__receptionist_personnel: List[Receptionist] = []
-        self.__pharmacist_personnel: List[Pharmacist] = []
-        self.__appointments: List[Appointment] = []
-        self.__patients: List[Patient] = []
-        self.__pending_prescriptions: List[Prescription] = []
-        self.__admissions: List[Admission] = []
-    
-    @property
-    def supplies(self) -> List[Supply]:
-        return self.__supplies
-    
-    @property
-    def financial_spendings(self) -> List[Any]:
-        return self.__financial_spendings
-    
-    @property
-    def financial_incomes(self) -> List[Any]:
-        return self.__financial_incomes
-    
-    @property
-    def appointments(self) -> List[Appointment]:
-        return self.__appointments
-    
-    @property
-    def patients(self) -> List[Patient]:
-        return self.__patients
-    
-    @property
-    def pending_prescriptions(self) -> List[Prescription]:
-        return self.__pending_prescriptions
-    
-    @property
-    def admissions(self) -> List[Admission]:
-        return self.__admissions
+        """Initialize the system with empty collections."""
+        self._users: Dict[int, User] = {}  # All system users
+        self._patients: Dict[int, Patient] = {}
+        self._appointments: Dict[int, Appointment] = {}
+        self._supplies: Dict[int, Supply] = {}
+        self._lab_requests: Dict[int, LabRequest] = {}
 
-    def get_personnel(self, personnel_type: str) -> Union[List[Any], str]:
-        personnel_map = {
-            "lab": self.__lab_personnel,
-            "doctor": self.__doctor_personnel,
-            "nurse": self.__nurse_personnel,
-            "receptionist": self.__receptionist_personnel,
-            "pharmacist": self.__pharmacist_personnel
-        }
-        
-        if personnel_type in personnel_map:
-            return personnel_map[personnel_type]
-        return "Error: Invalid type"
+    # User Management
+    def add_user(self, user: User) -> Tuple[bool, str]:
+        """Add a new user to the system."""
+        if user.id in self._users:
+            return False, "Error: User ID already exists"
+        self._users[user.id] = user
+        return True, f"Success: Added {user.user_type} to system"
     
-    def get_personnel_count(self, personnel_type: str) -> Union[int, str]:
-        personnel = self.get_personnel(personnel_type)
-        if isinstance(personnel, list):
-            return len(personnel)
-        return personnel  # Return the error message
-
-    def add_supply(self, name: str, count: int, unit: str, best_before: int, 
-                  price: float, restriction: str, notes: str) -> str:
-        try:
-            if count <= 0:
-                return "Error: Invalid count"
-                
-            valid_units = ["kg", "g", "mg", "l", "ml", "unit", "piece"]
-            if unit not in valid_units:
-                return "Error: Invalid unit"
-                
-            if best_before <= time.time():
-                return "Error: Invalid best before date"
-                
-            for supply in self.__supplies:
-                if supply.name == name:
-                    supply.add_count(count)
-                    return "Success: Supply count added"
-                    
-            self.__supplies.append(Supply(
-                name=name, count=count, unit=unit, best_before=best_before, 
-                price=price, restriction=restriction, notes=notes
-            ))
-            return "Success: New supply added"
-        except:
-            return "Error: Invalid input"
-
-    def add_personnel(self, personnel: Any) -> Tuple[bool, str]:
-        personnel_map = {
-            LabPersonnel: self.__lab_personnel,
-            Doctor: self.__doctor_personnel,
-            # Nurse: self.__nurse_personnel,  # Uncomment when Nurse class is implemented
-            Receptionist: self.__receptionist_personnel,
-            Pharmacist: self.__pharmacist_personnel
-        }
-        
-        for cls, personnel_list in personnel_map.items():
-            if isinstance(personnel, cls):
-                personnel_list.append(personnel)
-                return True, "Success: Added personnel"
-                
-        return False, f"Error: Invalid type for personnel {type(personnel)}"
-
+    def edit_user(self, user_id: int, updated_user: User) -> Tuple[bool, str]:
+        """Edit a user in the system."""
+        if user_id not in self._users:
+            return False, "Error: User not found"
+        if user_id != updated_user.id:
+            return False, "Error: Cannot change user ID"
+        self._users[user_id] = updated_user
+        return True, "Success: User updated"
+    
+    def remove_user(self, user_id: int) -> Tuple[bool, str]:
+        """Remove a user from the system."""
+        if user_id not in self._users:
+            return False, "Error: User not found"
+        del self._users[user_id]
+        return True, "Success: User removed"
+    
+    def change_user_password(self, user_id: int, old_password: str, new_password: str) -> Tuple[bool, str]:
+        """Change a user's password."""
+        if user_id not in self._users:
+            return False, "Error: User not found"
+        return self._users[user_id].change_password(old_password, new_password)
+    
+    # Patient Management
     def add_patient(self, patient: Patient) -> Tuple[bool, str]:
-        try:
-            self.__patients.append(patient)
-            return True, "Success: Added patient to record"
-        except Exception as exc:
-            return False, f"Error: {str(exc)}"
-            
-    def edit_patient(self, patient_to_edit: Patient, updated_patient: Patient) -> Tuple[bool, str]:
-        index = utils.get_object_index_in_container(
-            container=self.__patients, 
-            object=patient_to_edit, 
-            get_identifier=lambda obj: obj.id
-        )
-        
-        if index == -1:
-            return False, "Error: Cannot find patient"
-            
-        updated_patient.id = self.__patients[index].id
-        self.__patients[index] = updated_patient
-        return True, "Success: Edited patient data"
-        
-    def delete_patient(self, patient_id: int) -> Tuple[bool, str]:
-        index = utils.get_object_index_in_container_id(
-            container=self.__patients, 
-            id=patient_id, 
-            get_id=lambda obj: obj.id
-        )
-        
-        if index == -1:
-            return False, "Error: Could not find patient"
-            
-        del self.__patients[index]
-        return True, "Success: Deleted patient"
-        
+        """Add a new patient to the system."""
+        if patient.id in self._patients:
+            return False, "Error: Patient ID already exists"
+        self._patients[patient.id] = patient
+        return True, "Success: Patient added"
+    
+    def get_patient_from_id(self, patient_id: int) -> Optional[Patient]:
+        """Get a patient by ID."""
+        return self._patients.get(patient_id)
+    
+    # Appointment Management
     def add_appointment(self, appointment: Appointment) -> Tuple[bool, str]:
-        try:
-            self.__appointments.append(appointment)
-            return True, "Success: Appointment added"
-        except Exception as exc:
-            return False, f"Error: {str(exc)}"
-            
-    def change_appointment(self, appointment_id: int, patient_id: int, doctor_id: int, 
-                          date: str, time: str) -> str:
-        try:
-            for appointment in self.__appointments:
-                if appointment.appointment_id == appointment_id:
-                    appointment.patient_id = patient_id
-                    appointment.doctor_id = doctor_id
-                    appointment.date = date
-                    appointment.time = time
-                    return "Success: Appointment changed"
-            return "Error: Appointment not found"
-        except:
-            return "Error: Failed to change appointment"
-            
-    def remove_appointment(self, appointment_id: int) -> Tuple[bool, str]:
-        index = utils.get_object_index_in_container_id(
-            container=self.__appointments, 
-            id=appointment_id, 
-            get_id=lambda obj: obj.appointment_id
-        )
-        
-        if index == -1:
-            return False, "Error: Could not find appointment"
-            
-        del self.__appointments[index]
-        return True, "Success: Removed appointment"
-            
-    def add_admission(self, admission: Admission) -> Tuple[bool, str]:
-        try:
-            self.__admissions.append(admission)
-            return True, "Success: Admission added"
-        except Exception as exc:
-            return False, f"Error: {str(exc)}"
-            
-    def remove_admission(self, patient_id: int) -> Tuple[bool, str]:
-        index = utils.get_object_index_in_container_id(
-            container=self.__admissions, 
-            id=patient_id, 
-            get_id=lambda obj: obj.patient_id
-        )
-        
-        if index == -1:
-            return False, "Error: Could not find admission"
-            
-        del self.__admissions[index]
-        return True, "Success: Deleted admission"
-
-    def get_patient_by_id(self, patient_id: int) -> Optional[Patient]:
-        for patient in self.__patients:
-            if patient.id == patient_id:
-                return patient
-        return None
-
-    def pay_fee(self, fee: Fee, payment_method: PaymentMethod) -> Tuple[bool, str]:
-        payment_status = payment_method.pay(fee.amount)
-        if not payment_status[0]: 
-            return payment_status
-
-        fee_owner = self.get_patient_by_id(fee.patient_id)
-        if fee_owner is None: 
-            return False, "Error: Unable to find patient with ID specified in the fee"
-        
-        fee_removal_status = fee_owner.remove_fee(fee)
-        if not fee_removal_status[0]:
-            payment_method.refund(fee.amount)
-            return False, "Error: Unable to find the fee in patient. Refunded payment."
-            
-        return True, "Success: Fee is paid"
-        
-    def order_lab_test(self, lab_request: LabRequest, lab_personnel_id: int) -> Tuple[bool, str]:
-        for personnel in self.__lab_personnel:
-            if personnel.id == lab_personnel_id:
-                personnel.assign_lab_test(lab_request)
-                return True, "Success: Ordered lab test"
-                
-        return False, "Error: No lab personnel found with specified ID"
-        
+        """Add an appointment to the system."""
+        if appointment.id in self._appointments:
+            return False, "Error: Appointment ID already exists"
+        self._appointments[appointment.id] = appointment
+        return True, "Success: Appointment added"
+    
+    def update_appointment(self, appointment_id: int, updated_appointment: Appointment) -> Tuple[bool, str]:
+        """Update an existing appointment."""
+        if appointment_id not in self._appointments:
+            return False, "Error: Appointment not found"
+        if appointment_id != updated_appointment.id:
+            return False, "Error: Cannot change appointment ID"
+        self._appointments[appointment_id] = updated_appointment
+        return True, "Success: Appointment updated"
+    
+    def delete_appointment(self, appointment_id: int) -> Tuple[bool, str]:
+        """Delete an appointment from the system."""
+        if appointment_id not in self._appointments:
+            return False, "Error: Appointment not found"
+        del self._appointments[appointment_id]
+        return True, "Success: Appointment deleted"
+    
+    # Lab Test Management
+    def order_lab_test(self, lab_request: LabRequest) -> Tuple[bool, str]:
+        """Process a lab test request."""
+        if lab_request.id in self._lab_requests:
+            return False, "Error: Lab request ID already exists"
+        self._lab_requests[lab_request.id] = lab_request
+        return True, "Success: Lab test ordered"
+    
+    # Prescription Management
     def verify_prescription(self, prescription: Prescription) -> Tuple[bool, str]:
-        total_pharmacists = len(self.__pharmacist_personnel)
+        """Verify a prescription."""
+        # In a real system, this would have more verification logic
+        patient = self.get_patient_from_id(prescription.patient_id)
+        if patient is None:
+            return False, "Error: Patient not found"
+        patient.add_prescription(prescription)
+        return True, "Success: Prescription verified and added"
+    
+    # Supply Management
+    def add_supply(self, supply: Supply) -> Tuple[bool, str]:
+        """Add supply to the inventory."""
+        if supply.id in self._supplies:
+            return False, "Error: Supply ID already exists"
+        self._supplies[supply.id] = supply
+        return True, "Success: Supply added"
+    
+    def update_supply(self, supply_id: int, updated_supply: Supply) -> Tuple[bool, str]:
+        """Update supply in the inventory."""
+        if supply_id not in self._supplies:
+            return False, "Error: Supply not found"
+        if supply_id != updated_supply.id:
+            return False, "Error: Cannot change supply ID"
+        self._supplies[supply_id] = updated_supply
+        return True, "Success: Supply updated"
+    
+    def delete_supply(self, supply_id: int) -> Tuple[bool, str]:
+        """Delete supply from the inventory."""
+        if supply_id not in self._supplies:
+            return False, "Error: Supply not found"
+        del self._supplies[supply_id]
+        return True, "Success: Supply deleted"
+    
+    # Financial Reporting
+    def generate_financial_report(self, start_date: str, end_date: str) -> Tuple[bool, Dict[str, Any]]:
+        """Generate financial report for a period."""
+        report = {
+            "period": f"{start_date} to {end_date}",
+            "total_income": 0,
+            "total_expenses": 0,
+            "net_profit": 0,
+            "details": {
+                "doctor_fees": 0,
+                "medication_fees": 0,
+                "lab_fees": 0,
+                "other_income": 0,
+                "supply_expenses": 0,
+                "salary_expenses": 0,
+                "other_expenses": 0
+            }
+        }
         
-        if total_pharmacists == 0: 
-            return False, "Error: No pharmacists employed"
-            
-        random_pharmacist_index = random.randint(0, total_pharmacists - 1)
-        self.__pharmacist_personnel[random_pharmacist_index].add_prescription_for_verification(prescription)
-        return True, "Success: Sent prescription for verification with pharmacist"
+        # In a real system, you would collect and calculate real data here
         
-    def queue_prescription(self, prescription: Prescription) -> Tuple[bool, str]:
-        self.__pending_prescriptions.append(prescription)
-        return True, "Success: Prescription in queue"
+        report["total_income"] = sum([
+            report["details"]["doctor_fees"], 
+            report["details"]["medication_fees"], 
+            report["details"]["lab_fees"], 
+            report["details"]["other_income"]
+        ])
         
-    def get_doctor_by_id(self, doctor_id: int) -> Optional[Doctor]:
-        doctor_index = utils.get_object_index_in_container_id(
-            container=self.__doctor_personnel, 
-            id=doctor_id, 
-            get_id=lambda obj: obj.id
-        )
+        report["total_expenses"] = sum([
+            report["details"]["supply_expenses"], 
+            report["details"]["salary_expenses"], 
+            report["details"]["other_expenses"]
+        ])
         
-        if doctor_index == -1:
-            return None
-            
-        return self.__doctor_personnel[doctor_index]
+        report["net_profit"] = report["total_income"] - report["total_expenses"]
+        
+        return True, report

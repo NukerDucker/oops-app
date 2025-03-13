@@ -3,96 +3,52 @@ import time
 from .base_entity import BaseEntity
 
 class Supply(BaseEntity):
+    """Represents a medical supply in the inventory."""
+    
     def __init__(
-        self, 
-        name: str, 
-        count: int, 
-        best_before: int = None, 
-        price: float = 0, 
-        unit: str = 'piece(s)', 
-        restriction: str = 'No restrictions', 
-        notes: str = 'No notes'
-    ):
+        self,
+        name: str,
+        quantity: int,
+        unit_price: float,
+        category: str
+    ) -> None:
+        """Initialize a new Supply."""
         super().__init__()
         self._name = name
-        self._count = count
-        self._unit = unit
-        self._best_before = best_before if best_before is not None else 'Not specified'
-        self._price = price
-        self._restriction = restriction
-        self._notes = notes
-        
+        self._quantity = quantity
+        self._unit_price = unit_price
+        self._category = category
+    
     @property
     def name(self) -> str:
+        """Get the supply name."""
         return self._name
     
     @property
-    def count(self) -> int:
-        return self._count
+    def quantity(self) -> int:
+        """Get the supply quantity."""
+        return self._quantity
+    
+    @quantity.setter
+    def quantity(self, value: int) -> None:
+        """Set the supply quantity."""
+        self._quantity = max(0, value)
     
     @property
-    def unit(self) -> str:
-        return self._unit
+    def unit_price(self) -> float:
+        """Get the unit price."""
+        return self._unit_price
+    
+    @unit_price.setter
+    def unit_price(self, value: float) -> None:
+        """Set the unit price."""
+        self._unit_price = max(0, value)
     
     @property
-    def best_before(self) -> int:
-        return self._best_before
+    def category(self) -> str:
+        """Get the supply category."""
+        return self._category
     
-    @property
-    def price(self) -> float:
-        return self._price
-    
-    @property
-    def restriction(self) -> str:
-        return self._restriction
-    
-    @property
-    def notes(self) -> str:
-        return self._notes
-    
-    def add_count(self, count: int) -> Tuple[bool, str]:
-        if count < 0:
-            return False, "Error: Invalid count"
-        self._count += count
-        return True, "Success: Count added"
-    
-    def remove_count(self, count: int) -> Tuple[bool, str]:
-        if count < 0:
-            return False, "Error: Invalid count"
-        if self._count - count < 0:
-            return False, "Error: Not enough supply"
-        self._count -= count
-        return True, "Success: Count removed"
-        
-    def update_count(self, count: int) -> Tuple[bool, str]:
-        if count < 0:
-            return False, "Error: Invalid count"
-        self._count = count
-        return True, "Success: Count updated"
-        
-    def update_unit(self, unit: str) -> Tuple[bool, str]:
-        valid_units = ["kg", "g", "mg", "l", "ml", "unit", "piece(s)"]
-        if unit not in valid_units:
-            return False, "Error: Invalid unit"
-        self._unit = unit
-        return True, "Success: Unit updated"
-        
-    def update_best_before(self, best_before: int) -> Tuple[bool, str]:
-        if best_before <= time.time():
-            return False, "Error: Invalid best before date"
-        self._best_before = best_before
-        return True, "Success: Best before date updated"
-        
-    def update_price(self, price: float) -> Tuple[bool, str]:
-        if price < 0:
-            return False, "Error: Invalid price"
-        self._price = price
-        return True, "Success: Price updated"
-        
-    def update_restriction(self, restriction: str) -> Tuple[bool, str]:
-        self._restriction = restriction
-        return True, "Success: Restriction updated"
-        
-    def update_notes(self, notes: str) -> Tuple[bool, str]:
-        self._notes = notes
-        return True, "Success: Notes updated"
+    def total_value(self) -> float:
+        """Calculate the total value of the supply."""
+        return self._quantity * self._unit_price

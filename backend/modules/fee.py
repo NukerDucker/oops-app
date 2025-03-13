@@ -1,32 +1,33 @@
 from datetime import date
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 from .base_entity import BaseEntity
 
+FeeType = Literal["doctor", "medication", "lab", "other"]
+
 class Fee(BaseEntity):
-    """Represents a fee charged to a patient in the hospital system."""
+    """Represents a fee charged to a patient."""
     
     def __init__(
-        self, 
-        amount: float, 
-        fee_date: date, 
-        patient_id: int
+        self,
+        patient_id: int,
+        amount: float,
+        fee_type: FeeType,
+        description: str,
+        date: str
     ) -> None:
-        """Initialize a new fee record.
-        
-        Args:
-            amount: The fee amount
-            fee_date: The date when the fee was charged
-            patient_id: The ID of the patient associated with this fee
-        """
-        super().__init__()  # Generate the unique ID using the base class
-        self._amount = amount
-        self._date = fee_date
+        """Initialize a new Fee."""
+        super().__init__()
         self._patient_id = patient_id
+        self._amount = amount
+        self._fee_type = fee_type
+        self._description = description
+        self._date = date
+        self._paid = False
     
     @property
-    def fee_id(self) -> int:
-        """Get the fee's unique identifier."""
-        return self.id
+    def patient_id(self) -> int:
+        """Get the patient ID."""
+        return self._patient_id
     
     @property
     def amount(self) -> float:
@@ -34,11 +35,25 @@ class Fee(BaseEntity):
         return self._amount
     
     @property
-    def date(self) -> date:
-        """Get the date when the fee was charged."""
+    def fee_type(self) -> FeeType:
+        """Get the fee type."""
+        return self._fee_type
+    
+    @property
+    def description(self) -> str:
+        """Get the fee description."""
+        return self._description
+    
+    @property
+    def date(self) -> str:
+        """Get the fee date."""
         return self._date
     
     @property
-    def patient_id(self) -> int:
-        """Get the ID of the patient associated with this fee."""
-        return self._patient_id
+    def paid(self) -> bool:
+        """Get the payment status."""
+        return self._paid
+    
+    def mark_as_paid(self) -> None:
+        """Mark the fee as paid."""
+        self._paid = True
