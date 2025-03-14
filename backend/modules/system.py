@@ -4,7 +4,6 @@ from .doctor import Doctor
 from .receptionist import Receptionist
 from .patient import Patient
 from .appointment import Appointment
-from .lab_request import LabRequest
 from .prescription import Prescription
 from .supply import Supply
 
@@ -84,14 +83,6 @@ class System:
             return False, "Error: Appointment not found"
         del self._appointments[appointment_id]
         return True, "Success: Appointment deleted"
-    
-    # Lab Test Management
-    def order_lab_test(self, lab_request: LabRequest) -> Tuple[bool, str]:
-        """Process a lab test request."""
-        if lab_request.id in self._lab_requests:
-            return False, "Error: Lab request ID already exists"
-        self._lab_requests[lab_request.id] = lab_request
-        return True, "Success: Lab test ordered"
     
     # Prescription Management
     def verify_prescription(self, prescription: Prescription) -> Tuple[bool, str]:

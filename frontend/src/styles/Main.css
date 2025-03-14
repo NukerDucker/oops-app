@@ -12,6 +12,10 @@
   --spacing-lg: 3rem;
 }
 
+html, body{
+  font-family: -apple-system, system-ui, BlinkMacSystemFont;
+}
+
 /* Profile styles */
 .profile-icon {
   width: 90%;
@@ -38,7 +42,7 @@
   font-weight: 500;
   transition: all 0.2s ease;
   line-height: 1.5;
-  margin-bottom: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;

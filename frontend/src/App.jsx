@@ -10,11 +10,12 @@ function App() {
   return (
     <>
     <head>
-      <link rel="icon" type="image/png" href="assets/logo.png" />
+      <link rel="icon" type="image/png" href="favicon.png" />
     </head>
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/inventory" element={ <ProtectedRoute> <Inventory /> </ProtectedRoute>}/>
           <Route path="/main" element={<ProtectedRoute> <Main /> </ProtectedRoute>} />
           <Route path="/patient" element={<ProtectedRoute> <Patient /> </ProtectedRoute>} />

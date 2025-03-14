@@ -5,40 +5,54 @@ import "../styles/Main.css";
 const Main = () => {
   const [data, setData] = useState(null);
   const [usernames, setUsernames] = useState([]);
-  const [emails, setEmails] = useState([]);
   const [roles, setRoles] = useState([]);
   const [access, setAccess] = useState([]);
   const [profile_image_directory, setProfileImageDirectory] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [weekly_tasks, setWeeklyTasks] = useState([]);
-  const [emergency_tasks, setEmergencyTasks] = useState([]);
+  const [error, setError] = useState(null);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = 4;
-
-  //fetch data dynamically
+  
   useEffect(() => {
-    fetch("/sampleMaindata.json")
-      .then((response) => response.json())
-      .then((json) => {
-        setData(json);
-        const usernames = json.map((data) => data.username);
-        setUsernames(usernames);
-        const roles = json.map((data) => data.role);
-        setRoles(roles);
-        const allow_access = json.flatMap((data) => data.allow_access);
-        setAccess(allow_access);
-        const profile_image_directory = json.map((data) => data.profile_image_directory);
-        setProfileImageDirectory(profile_image_directory);
-        const tasks = json.flatMap((data) => data.tasks);
-        setTasks(tasks);
-        const weekly_tasks = json.flatMap((data) => data.weekly_tasks);
-        setWeeklyTasks(weekly_tasks);
-        const emergency_tasks = json.flatMap((data) => data.emergency_tasks);
-        setEmergencyTasks(emergency_tasks);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("No authentication token found. Please login.");
+      return;
+    }
 
+    fetch("http://127.0.0.1:5000/api/user-data", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("token");
+            throw new Error("Your session has expired. Please login again.");
+          }
+          throw new Error("Failed to fetch data from server");
+        }
+        return response.json();
       })
-      .catch((error) => console.error("Error fetching data: ", error));
+      .then((userData) => {
+        setData(userData);
+        
+        setUsernames([userData.username]);
+        setRoles([userData.user_type || "User"]);
+        setAccess(userData.allow_access || []);
+        setProfileImageDirectory([userData.profile_image_directory || "Profile-Icon.png"]);
+        setTasks(userData.tasks || []);
+        setWeeklyTasks(userData.weekly_tasks || []);
+        
+        setError(null);
+      })
+      .catch((error) => {
+        console.error("Error fetching user data: ", error);
+        setError(error.message);
+      });
   }, []);
 
   useEffect(() => {
@@ -49,9 +63,26 @@ const Main = () => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
-  if (!data) return <p>Loading...</p>;
+  // Show error message if there was an error fetching data
+  if (error) return (
+    <div className="ContainerPage">
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button onClick={() => window.location.href = "/login"} className="login-button">
+          Go to Login
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!data) return <p className="Loading">Loading...</p>;
 
   return (
+    <>
+<head>
+      <title>MedSoft - Main</title>
+    
+    </head>
     <div className="ContainerPage">
       <div className="ContainerPageUIBoundary">
         <div className="ContainerPageLeftPanel">
@@ -66,9 +97,6 @@ const Main = () => {
           <div className="HL1"></div>
 
           <div className="ContainerColumnContainer" style={{alignItems: "center"}}>
-            <div className="Link mainButton">
-          <a href="/main">Main</a>
-          </div>
           {access.map((access, index) => (
                   <div className="Link" key={index}>
                     <a href={access.access_link}>{access.access}</a>
@@ -82,15 +110,7 @@ const Main = () => {
 
         <div className="ContainerPageMiddlePanel">
           <div className="ContainerRowContainer" style={{justifyContent: "flex-start"}}>
-          <p className="welcome-text">Welcome Back!, {usernames[0]}</p>
-          </div>
-          <div className="ContainerRowContainer" style={{justifyContent: "flex-start"}}>
-            <div className="search-bar">
-              <input name="search" type="text" placeholder="Search" />
-              <button type="submit">
-                <img src="search-icon.png" alt="Search" />
-              </button>
-            </div>
+          <p className="welcome-text">Welcome Back!, <strong>{usernames[0]}</strong></p>
           </div>
 
           <div className="ContainerColumnContainer" style={{height: "40%"}}>
@@ -147,15 +167,13 @@ const Main = () => {
                     <p>Description: {weekly_task.description}</p>
                   </div>
                 ))}
-
               </div>
             </div>
           </div>
         </div>
-
-          {/* Add right banner here if needed */}
-        </div>
       </div>
+    </div>
+    </>
   );
 };
 

@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Tuple
 from .base_entity import BaseEntity
 
-UserType = Literal["user", "admin", "doctor", "receptionist"]
+UserType = Literal["User", "Admin", "Doctor", "Receptionist"]
 
 class AccessPermission:
     def __init__(self, access, access_link):
@@ -23,7 +23,6 @@ class User(BaseEntity):
         username: str, 
         password_hash: str,
         user_type: UserType = "user",
-        email: Optional[str] = None
     ) -> None:
         """Initialize a new User.
         
@@ -39,7 +38,6 @@ class User(BaseEntity):
         self._username = username
         self._password_hash = password_hash
         self._user_type = user_type
-        self._email = email
         self._profile_image_directory = "Profile-Icon.png"
         self._access_permissions = []
         self._tasks = []
@@ -66,10 +64,6 @@ class User(BaseEntity):
         """Get the user's type."""
         return self._user_type
     
-    @property
-    def email(self) -> Optional[str]:
-        """Get the user's email."""
-        return self._email
     
     def add_access_permission(self, access, access_link):
         self._access_permissions.append(AccessPermission(access, access_link))
@@ -88,7 +82,6 @@ class User(BaseEntity):
         return {
             "id": self.id,
             "username": self.username,
-            "email": self.email,
             "user_type": self.user_type,
             "allow_access": [perm.to_dict() for perm in self._access_permissions],
             "profile_image_directory": self._profile_image_directory,
