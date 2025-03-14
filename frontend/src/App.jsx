@@ -5,23 +5,35 @@ import Inventory from './components/Inventory.jsx';
 import Main from './components/Main.jsx';
 import Patient from './components/Patient.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+
+// Create a custom theme with your accent color
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#ad69cc', // Your accent color
+    },
+  },
+});
 
 function App() {
   return (
-    <>
-    <head>
-      <link rel="icon" type="image/png" href="favicon.png" />
-    </head>
-    <Router>
-      <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/inventory" element={ <ProtectedRoute> <Inventory /> </ProtectedRoute>}/>
-          <Route path="/main" element={<ProtectedRoute> <Main /> </ProtectedRoute>} />
-          <Route path="/patient" element={<ProtectedRoute> <Patient /> </ProtectedRoute>} />
-      </Routes>
-    </Router>
-    </>
+    <ThemeProvider theme={theme}>
+      <>
+      <head>
+        <link rel="icon" type="image/png" href="favicon.png" />
+      </head>
+      <Router>
+        <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/inventory" element={ <ProtectedRoute> <Inventory /> </ProtectedRoute>}/>
+            <Route path="/main" element={<ProtectedRoute> <Main /> </ProtectedRoute>} />
+            <Route path="/patient" element={<ProtectedRoute> <Patient /> </ProtectedRoute>} />
+        </Routes>
+      </Router>
+      </>
+    </ThemeProvider>
   );
 };
 

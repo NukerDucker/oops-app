@@ -24,6 +24,11 @@ class Supply(BaseEntity):
         """Get the supply name."""
         return self._name
     
+    @name.setter
+    def name(self, value: str) -> None:
+        """Set the supply name."""
+        self._name = value
+    
     @property
     def quantity(self) -> int:
         """Get the supply quantity."""
@@ -48,6 +53,11 @@ class Supply(BaseEntity):
     def category(self) -> str:
         """Get the supply category."""
         return self._category
+    
+    @category.setter
+    def category(self, value: str) -> None:
+        """Set the supply category."""
+        self._category = value
     
     def total_value(self) -> float:
         """Calculate the total value of the supply."""

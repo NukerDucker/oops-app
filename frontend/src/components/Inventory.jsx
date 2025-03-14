@@ -55,21 +55,6 @@ const InventoryList = () => {
     unit_price: ''
   });
 
-  // Menu state for dropdown actions
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedItemId, setSelectedItemId] = useState(null);
-
-  // Handle opening/closing dropdown menu
-  const handleMenuOpen = (event, itemId) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedItemId(itemId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedItemId(null);
-  };
-
   useEffect(() => {
     // Get authentication token from local storage
     const token = localStorage.getItem("token");
@@ -156,7 +141,7 @@ const InventoryList = () => {
     };
     
     // Return the mapped image or a default one
-    return categoryImages[category] || "medication.png";
+    return categoryImages[category] || "drug.svg";
   };
 
   // Search functionality
@@ -181,47 +166,59 @@ const InventoryList = () => {
     e.preventDefault();
     
     if (isEditing) {
-      // Update existing inventory item
-      fetch(`http://127.0.0.1:5000/api/inventory/update`, {
+      // Add debugging to see exactly what's being sent
+      const requestPayload = {
+        id: currentItem.id,
+        name: currentItem.name,
+        quantity: parseInt(currentItem.count),
+        unit_price: parseFloat(currentItem.unit_price),
+        category: currentItem.category
+      };
+      console.log("Sending update request with payload:", requestPayload);
+
+      fetch("http://127.0.0.1:5000/api/inventory/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ 
-          id: currentItem.id,
-          name: currentItem.name,
-          quantity: parseInt(currentItem.count),
-          category: currentItem.category,
-          unit_price: parseFloat(currentItem.unit_price)
-        }),
+        body: JSON.stringify(requestPayload),
       })
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to update item");
+        .then((response) => {
+          if (!response.ok) {
+            // Improved error handling
+            return response.text().then(text => {
+              console.error("Error details:", text);
+              throw new Error(`Failed to update item (status: ${response.status}): ${text}`);
+            });
+          }
           return response.json();
         })
-        .then(data => {
-          // Update the inventory list with the updated item
+        .then((data) => {
+          // Rest of your success handler remains the same
+          console.log("Update success:", data);
+          
           const updatedList = inventory_list.map(item => 
-            item.id === currentItem.id ? {
-              ...item,
-              name: currentItem.name,
-              count: parseInt(currentItem.count),
-              category: currentItem.category,
-              unit_price: parseFloat(currentItem.unit_price),
-              total_value: parseInt(currentItem.count) * parseFloat(currentItem.unit_price),
-              image: getCategoryImage(currentItem.category)
-            } : item
+            item.id === currentItem.id 
+              ? {
+                  ...item,
+                  name: currentItem.name,
+                  count: parseInt(currentItem.count), 
+                  category: currentItem.category,
+                  unit_price: parseFloat(currentItem.unit_price),
+                  image: getCategoryImage(currentItem.category)
+                } 
+              : item
           );
           
           setInventoryList(updatedList);
           setFilteredInventory(updatedList);
           setShowModal(false);
-          alert("Inventory item updated successfully!");
+          alert("Item updated successfully!");
         })
-        .catch(error => {
-          console.error("Error updating inventory:", error);
-          alert("Failed to update inventory item: " + error.message);
+        .catch((error) => {
+          console.error("Error updating item:", error);
+          alert("Failed to update item: " + error.message);
         });
     } else {
       // Add new inventory item
@@ -274,115 +271,33 @@ const InventoryList = () => {
       [name]: value
     });
   };
-  
-  const handleAddCount = (itemId) => {
-    const userInput = window.prompt("Enter count to be add:");
-    if (userInput !== null) {
-      setInputValue(userInput);
-
-      fetch("http://127.0.0.1:5000/api/inventory/add-count", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ 
-          inventoryId: itemId, 
-          count: userInput 
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error("Failed to add count");
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Success:", data);
-          const updatedList = inventory_list.map(inv => 
-            inv.id === itemId 
-              ? {...inv, count: inv.count + parseInt(userInput)} 
-              : inv
-          );
-          setInventoryList(updatedList);
-          setFilteredInventory(updatedList);
-          alert("Count added successfully!");
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert("Failed to add count: " + error.message);
-        });
-    }
-    handleMenuClose();
-  };
-
-  const handleDeleteCount = (itemId) => {
-    const userInput = window.prompt("Enter count to be delete:");
-    if (userInput !== null) {
-      setInputValue(userInput);
-
-      fetch("http://127.0.0.1:5000/api/inventory/delete-count", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ 
-          inventoryId: itemId, 
-          count: userInput 
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error("Failed to delete count");
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Success:", data);
-          const updatedList = inventory_list.map(inv => 
-            inv.id === itemId 
-              ? {...inv, count: Math.max(0, inv.count - parseInt(userInput))} 
-              : inv
-          );
-          setInventoryList(updatedList);
-          setFilteredInventory(updatedList);
-          alert("Count deleted successfully!");
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert("Failed to delete count: " + error.message);
-        });
-    }
-    handleMenuClose();
-  };
 
   const handleRemoveItem = (itemId) => {
-    const userInput = window.prompt("Are you sure? Type 'yes' to confirm:");
-    if (userInput && userInput.toLowerCase() === 'yes') {
-      fetch("http://127.0.0.1:5000/api/inventory/remove", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ 
-          inventoryId: itemId
-        }),
+    fetch("http://127.0.0.1:5000/api/inventory/remove", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify({ 
+        inventoryId: itemId
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to delete item");
+        return response.json();
       })
-        .then((response) => {
-          if (!response.ok) throw new Error("Failed to delete item");
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Success:", data);
-          const updatedList = inventory_list.filter(inv => inv.id !== itemId);
-          setInventoryList(updatedList);
-          setFilteredInventory(updatedList);
-          alert("Item removed successfully!");
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert("Failed to remove item: " + error.message);
-        });
-    }
-    handleMenuClose();
+      .then((data) => {
+        console.log("Success:", data);
+        const updatedList = inventory_list.filter(inv => inv.id !== itemId);
+        setInventoryList(updatedList);
+        setFilteredInventory(updatedList);
+        alert("Item removed successfully!");
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Failed to remove item: " + error.message);
+      });
   };
 
   // Show error message if there was an error fetching data
@@ -413,7 +328,7 @@ const InventoryList = () => {
   return (
     <>
     <head>
-      <title>MedSoft - Main</title>
+      <title>MedSoft - Inventory</title>
     </head>
    
     <div className="ContainerPage">
@@ -544,11 +459,11 @@ const InventoryList = () => {
                       <TableCell align="center">{item.count}</TableCell>
                       <TableCell>{item.category}</TableCell>
                       <TableCell align="right">${parseFloat(item.unit_price).toFixed(2)}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         <Button
                           variant="contained"
                           size="small"
-                          sx={{ mr: 1 }}
+                          sx={{ mr: 1 , backgroundColor: 'var(--accent-color)', color: 'white' }}
                           onClick={() => {
                             setIsEditing(true);
                             setCurrentItem({
@@ -563,13 +478,7 @@ const InventoryList = () => {
                         >
                           Edit
                         </Button>
-                        
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => handleMenuOpen(e, item.id)}
-                        >
-                          ⋮
-                        </IconButton>
+                      
                       </TableCell>
                     </TableRow>
                   ))
@@ -581,17 +490,7 @@ const InventoryList = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          
-          {/* Dropdown Menu for Actions */}
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem onClick={() => handleAddCount(selectedItemId)}>Add count</MenuItem>
-            <MenuItem onClick={() => handleDeleteCount(selectedItemId)}>Delete count</MenuItem>
-            <MenuItem onClick={() => handleRemoveItem(selectedItemId)}>Remove from inventory</MenuItem>
-          </Menu>
+        
         </div>
       </div>
       
@@ -643,13 +542,15 @@ const InventoryList = () => {
                 required
               >
                 <MenuItem value="">Select a category</MenuItem>
-                <MenuItem value="Protective Equipment">Protective Equipment</MenuItem>
-                <MenuItem value="Sterilization">Sterilization</MenuItem>
-                <MenuItem value="Diagnostic Equipment">Diagnostic Equipment</MenuItem>
-                <MenuItem value="Injection Supplies">Injection Supplies</MenuItem>
-                <MenuItem value="Wound Care">Wound Care</MenuItem>
-                <MenuItem value="Hygiene Products">Hygiene Products</MenuItem>
-                <MenuItem value="Patient Care">Patient Care</MenuItem>
+                <MenuItem value="Pain Relief">Pain Relief</MenuItem>
+                <MenuItem value="Antibiotic">Antibiotic</MenuItem>
+                <MenuItem value="Diabetes Management">Diabetes Management</MenuItem>
+                <MenuItem value="Cardiovascular">Cardiovascular</MenuItem>
+                <MenuItem value="Allergy Relief">Allergy Relief</MenuItem>
+                <MenuItem value="Cold & Flu">Cold & Flu</MenuItem>
+                <MenuItem value="Digestive Health">Digestive Health</MenuItem>
+                <MenuItem value="Emergency Allergy Treatment">Emergency Allergy Treatment</MenuItem>
+                <MenuItem value="Sleep Aid">Sleep Aid</MenuItem>
               </Select>
             </FormControl>
             
@@ -667,13 +568,29 @@ const InventoryList = () => {
               inputProps={{ min: 0, step: "0.01" }}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowModal(false)} color="primary">
-              Cancel
-            </Button>
-            <Button type="submit" color="primary" variant="contained">
-              {isEditing ? 'Update' : 'Add Item'}
-            </Button>
+          <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+            {isEditing && (
+              <Button 
+                onClick={() => {
+                  if(window.confirm("Are you sure you want to delete this item?")) {
+                    handleRemoveItem(currentItem.id);
+                    setShowModal(false);
+                  }
+                }} 
+                color="error" 
+                variant="contained"
+              >
+                Delete
+              </Button>
+            )}
+            <div>
+              <Button onClick={() => setShowModal(false)} color="primary" sx={{ mr: 1 }}>
+                Cancel
+              </Button>
+              <Button type="submit" color="primary" variant="contained">
+                {isEditing ? 'Update' : 'Add Item'}
+              </Button>
+            </div>
           </DialogActions>
         </form>
       </Dialog>

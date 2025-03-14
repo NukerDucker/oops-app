@@ -36,9 +36,9 @@ html, body {
 
 /* ------------- Profile Card Styles ------------- */
 .profile-page-card-parent {
-  width: 95%;
-  height: auto; /* Changed from 91% to auto */
-  max-height: 90vh; /* Maximum viewport height */
+  max-width: 1280px; 
+  /* Changed from 91% to auto */
+  max-height: 720px; /* Maximum viewport height */
   display: flex;
   background-color: var(--secondary-bg);
   border-radius: var(--border-radius-lg);
@@ -428,7 +428,7 @@ html, body {
 .ContainerPageUIBoundary{
   font-family: -apple-system, system-ui, BlinkMacSystemFont;
   width: 95vw;
-  height: 90vh;
+  height: 95vh;
   display: flex;
   flex:1;
   flex-direction: row;
@@ -483,7 +483,6 @@ border-radius: 30px;
   margin-left: 48px;
   margin-top: 19px    ;
   margin-bottom: 19px;
-  font-family: Arial;
   font-size: 2.5rem;
   align-items: center;
 }
@@ -492,14 +491,12 @@ border-radius: 30px;
   color: var(--text-color);
   display: flex;
   justify-content: left;
-  font-family: Arial;
   font-size: 2rem;
   align-items: center;
   margin: 0px;
   padding: 0px;
 }
 h1{
-  font-family: Arial;
   font-size: 1.75rem;
   color: var(--text-color);
   margin-top: 1rem;
@@ -507,7 +504,6 @@ h1{
 }
 
 h2{
-  font-family: Arial;
   font-size: 1.5rem;
   color: var(--text-color);
   margin-top: 1rem;
@@ -515,7 +511,6 @@ h2{
 }
 
 p{
-  font-family: Arial;
   font-size: 1rem;
   color: var(--text-color);
   margin-top: 1rem;
@@ -523,7 +518,6 @@ p{
 }
 
 .span{
-  font-family: Arial;
   font-size: 1rem;
   color: var(--text-color);
   margin-top: 1rem;
@@ -532,6 +526,7 @@ p{
 
 .VL1{
   border-left: 2px solid black;
+  border-left-color: #000;
   height: 90%;
   width: 0px;
   margin-top: 3%;
@@ -540,7 +535,7 @@ p{
 
 .HL1{
   border: 2px solid black;
-  width: 90%;
+  width: 100%;
   height: 0px;
   margin-top: 3%;
   opacity: 25%;
@@ -775,21 +770,21 @@ html, body{
 }
 
 /* Custom scrollbar styling */
-.ContainerRowContainer .task::-webkit-scrollbar {
+.ContainerRowContainer::-webkit-scrollbar {
   width: 8px;
 }
 
-.ContainerRowContainer .task::-webkit-scrollbar-track {
+.ContainerRowContainer::-webkit-scrollbar-track {
   background: var(--primary-bg);
   border-radius: 10px;
 }
 
-.ContainerRowContainer .task::-webkit-scrollbar-thumb {
+.ContainerRowContainer::-webkit-scrollbar-thumb {
   background: #9d93a3;
   border-radius: 10px;
 }
 
-.ContainerRowContainer .task::-webkit-scrollbar-thumb:hover {
+.ContainerRowContainer::-webkit-scrollbar-thumb:hover {
   background: #75697c;
 }
 
@@ -963,4 +958,25 @@ html, body{
   display: flex;
   flex-direction: row;
   box-sizing: border-box;
+}
+
+/* Add these rules at the bottom of your Inventory.css file */
+
+/* Custom scrollbar for TableContainer */
+.MuiTableContainer-root::-webkit-scrollbar {
+  width: 8px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-track {
+  background: var(--primary-bg);
+  border-radius: 10px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-thumb {
+  background: #9d93a3;
+  border-radius: 10px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-thumb:hover {
+  background: #75697c;
 }
