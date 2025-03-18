@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/Global.css";
 import "../styles/Login.css";
 
 import Button from "@mui/material/Button";

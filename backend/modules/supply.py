@@ -3,7 +3,6 @@ import time
 from .base_entity import BaseEntity
 
 class Supply(BaseEntity):
-    """Represents a medical supply in the inventory."""
     
     def __init__(
         self,
@@ -12,7 +11,6 @@ class Supply(BaseEntity):
         unit_price: float,
         category: str
     ) -> None:
-        """Initialize a new Supply."""
         super().__init__()
         self._name = name
         self._quantity = quantity
@@ -21,44 +19,35 @@ class Supply(BaseEntity):
     
     @property
     def name(self) -> str:
-        """Get the supply name."""
         return self._name
     
     @name.setter
     def name(self, value: str) -> None:
-        """Set the supply name."""
         self._name = value
     
     @property
     def quantity(self) -> int:
-        """Get the supply quantity."""
         return self._quantity
     
     @quantity.setter
     def quantity(self, value: int) -> None:
-        """Set the supply quantity."""
         self._quantity = max(0, value)
     
     @property
     def unit_price(self) -> float:
-        """Get the unit price."""
         return self._unit_price
     
     @unit_price.setter
     def unit_price(self, value: float) -> None:
-        """Set the unit price."""
         self._unit_price = max(0, value)
     
     @property
     def category(self) -> str:
-        """Get the supply category."""
         return self._category
     
     @category.setter
     def category(self, value: str) -> None:
-        """Set the supply category."""
         self._category = value
     
     def total_value(self) -> float:
-        """Calculate the total value of the supply."""
         return self._quantity * self._unit_price

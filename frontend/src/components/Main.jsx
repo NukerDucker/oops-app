@@ -1,179 +1,247 @@
 import React, { useState, useEffect } from "react";
-import "../styles/Global.css";
-import "../styles/Main.css";
+import "../styles/Inventory.css"; // Import Inventory styles
+import { Grid2, Typography, Button, Box, Paper, IconButton } from '@mui/material';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import UserProfile from "./UserProfile";
+import useUserData from "../hooks/useUserData";
 
 const Main = () => {
-  const [data, setData] = useState(null);
-  const [usernames, setUsernames] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [access, setAccess] = useState([]);
-  const [profile_image_directory, setProfileImageDirectory] = useState([]);
+  const { 
+    data, 
+    usernames, 
+    roles, 
+    access, 
+    profile_image_directory, 
+    error, 
+    isLoading 
+  } = useUserData();
+  
   const [tasks, setTasks] = useState([]);
   const [weekly_tasks, setWeeklyTasks] = useState([]);
-  const [error, setError] = useState(null);
-
   const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = 4;
+  
+  // Define your slides - replace with your actual slide content/images
+  const slides = [
+    "https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg?cs=srgb&dl=pexels-pixabay-236380.jpg&fm=jpg",
+    "https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg?cs=srgb&dl=pexels-pixabay-236380.jpg&fm=jpg",
+    "https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg?cs=srgb&dl=pexels-pixabay-236380.jpg&fm=jpg",
+    "https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg?cs=srgb&dl=pexels-pixabay-236380.jpg&fm=jpg",
+  ];
+  
+  const totalSlides = slides.length;
   
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("No authentication token found. Please login.");
-      return;
+    if (data) {
+      setTasks(data.tasks || []);
+      setWeeklyTasks(data.weekly_tasks || []);
     }
-
-    fetch("http://127.0.0.1:5000/api/user-data", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem("token");
-            throw new Error("Your session has expired. Please login again.");
-          }
-          throw new Error("Failed to fetch data from server");
-        }
-        return response.json();
-      })
-      .then((userData) => {
-        setData(userData);
-        
-        setUsernames([userData.username]);
-        setRoles([userData.user_type || "User"]);
-        setAccess(userData.allow_access || []);
-        setProfileImageDirectory([userData.profile_image_directory || "Profile-Icon.png"]);
-        setTasks(userData.tasks || []);
-        setWeeklyTasks(userData.weekly_tasks || []);
-        
-        setError(null);
-      })
-      .catch((error) => {
-        console.error("Error fetching user data: ", error);
-        setError(error.message);
-      });
-  }, []);
+  }, [data]);
 
   useEffect(() => {
+    // Auto-rotation for carousel
     const interval = setInterval(() => {
-      setCurrentSlide((prevSlide) => (prevSlide % totalSlides) + 1);
+      setCurrentSlide((prevSlide) => (prevSlide + 1) % totalSlides);
     }, 7000); // Change slide every 7 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
-  }, []);
+  }, [totalSlides]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prevSlide) => (prevSlide + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prevSlide) => (prevSlide - 1 + totalSlides) % totalSlides);
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
 
   // Show error message if there was an error fetching data
   if (error) return (
     <div className="ContainerPage">
       <div className="error-container">
         <p className="error-message">{error}</p>
-        <button onClick={() => window.location.href = "/login"} className="login-button">
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.href = "/login"}
+        >
           Go to Login
-        </button>
+        </Button>
       </div>
     </div>
   );
 
-  if (!data) return <p className="Loading">Loading...</p>;
+  if (isLoading) return <Typography className="Loading">Loading...</Typography>;
 
   return (
-    <>
-<head>
-      <title>MedSoft - Main</title>
-    
-    </head>
-    <div className="ContainerPage">
-      <div className="ContainerPageUIBoundary">
-        <div className="ContainerPageLeftPanel">
-          <img src="logo.png" className="logo" alt="Logo" />
-          <p>{roles.join(", ")}</p>
-          <img
-            src={profile_image_directory[0]}
-            className="profile-icon"
-            alt="Profile"
-          />
-          <p>{usernames.join(", ")}</p>
-          <div className="HL1"></div>
+    <div className="parent-card">
+      <Grid2 container spacing={2} sx={{ height: '100%', width: '100%' }}>
+        {/* User profile component */}
+        <UserProfile 
+          usernames={usernames}
+          roles={roles}
+          profile_image_directory={profile_image_directory}
+          access={access}
+        />
+        
+        {/* Right column - Main content */}
+        <Grid2 xs={8} sx={{ display: 'flex', flexDirection: 'column', padding: 2, width: '85%' }}>
+          <Box sx={{ flexGrow: 0, marginBottom: 2 }}>
+            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+              Welcome Back, <strong>{usernames[0]}</strong>
+            </Typography>
+          </Box>
 
-          <div className="ContainerColumnContainer" style={{alignItems: "center"}}>
-          {access.map((access, index) => (
-                  <div className="Link" key={index}>
-                    <a href={access.access_link}>{access.access}</a>
-                  </div>
-          ))}
-
-          </div>
-        </div>
-
-        <div className="VL1"></div>
-
-        <div className="ContainerPageMiddlePanel">
-          <div className="ContainerRowContainer" style={{justifyContent: "flex-start"}}>
-          <p className="welcome-text">Welcome Back!, <strong>{usernames[0]}</strong></p>
-          </div>
-
-          <div className="ContainerColumnContainer" style={{height: "40%"}}>
-            <div className="SlidesViewPort">
-              <div className="SlidesContainer" style={{ transform: `translateX(-${(currentSlide%totalSlides) * 25}%)` }}>
-                  <div className="SlideContent">
-                    <h2>Slide 1</h2>
-                    <p>Content for Slide 1</p>
-                  </div>
-                  <div className="SlideContent">
-                    <h2>Slide 2</h2>
-                    <p>Content for Slide 2</p>
-                  </div>
-                  <div className="SlideContent">
-                    <h2>Slide 3</h2>
-                    <p>Content for Slide 3</p>
-                  </div>
-                  <div className="SlideContent">
-                    <h2>Slide 4</h2>
-                    <p>Content for Slide 4</p>
-                  </div>
-              </div>
-              {/* Navigation Bullets */}
+          {/* Carousel section */}
+          <Box sx={{ 
+            flexGrow: 0, 
+            height: '40%', 
+            mb: 2,
+            borderRadius: '10px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+          }}>
+            {/* Carousel content stays the same */}
+            <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+              <img 
+                src={slides[currentSlide]} 
+                alt={`Slide ${currentSlide + 1}`} 
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  maxHeight: '400px', 
+                  objectFit: 'cover', 
+                  borderRadius: '10px' 
+                }}
+              />
+              <IconButton
+                onClick={prevSlide}
+                sx={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  bgcolor: 'rgba(255, 255, 255, 0.7)',
+                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' }
+                }}
+              >
+                <ArrowBackIosIcon />
+              </IconButton>
+              <IconButton
+                onClick={nextSlide}
+                sx={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  bgcolor: 'rgba(255, 255, 255, 0.7)',
+                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' }
+                }}
+              >
+                <ArrowForwardIosIcon />
+              </IconButton>
             </div>
-            <div className = "ContainerRowContainer" style={{justifyContent: "center"}}>
-              <div id="bullets">
-                {[1, 2, 3, 4].map((index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index - 1)}
-                    className={index - 1 === currentSlide ? "active" : ""}
-                  ></button>
-                ))}
-              </div>
-            </div>
-          </div>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              mt: 1 
+            }}>
+              {slides.map((_, index) => (
+                <Box
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  sx={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    mx: 0.5,
+                    bgcolor: currentSlide === index ? 'primary.main' : 'grey.400',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.3s'
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
 
-          <div className="ContainerColumnContainer taskContainer task">
-            <div className="ContainerRowContainer">
-              <div className="ContainerColumnContainer task " style={{width: "50%"}}>
-                {tasks.map((task, index) => (
-                  <div className="TaskBox" key={index}>
-                    <h1>Upcoming Appointment #{index + 1}</h1>
-                    <h2>Title: {task.title}</h2>
-                    <p>Description: {task.description}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="ContainerColumnContainer task" style={{width: "50%"}}>
-              {weekly_tasks.map((weekly_task, index) => (
-                  <div className="TaskBox" key={index}>
-                    <h1>Weekly Tasks #{index + 1}</h1>
-                    <h2>Title: {weekly_task.title}</h2>
-                    <p>Description: {weekly_task.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Tasks section - unchanged */}
+          <Box sx={{ 
+            flexGrow: 1, 
+            display: 'flex', 
+            flexDirection: 'column',
+            mt: 2
+          }}>
+            <Grid2 container spacing={2}>
+              {/* Upcoming Appointments */}
+              <Grid2 xs={6}>
+                <Typography variant="h6" sx={{ mb: 2 }}>Upcoming Appointments</Typography>
+                {tasks.length > 0 ? (
+                  tasks.map((task, index) => (
+                    <Paper
+                      key={index}
+                      elevation={2}
+                      sx={{ 
+                        p: 2, 
+                        mb: 2, 
+                        borderRadius: '10px',
+                        '&:hover': { backgroundColor: 'rgba(236, 230, 240, 0.4)' }, 
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        Appointment #{index + 1}
+                      </Typography>
+                      <Typography variant="subtitle2">
+                        {task.title}
+                      </Typography>
+                      <Typography variant="body2">
+                        {task.description}
+                      </Typography>
+                    </Paper>
+                  ))
+                ) : (
+                  <Typography variant="body2">No upcoming appointments</Typography>
+                )}
+              </Grid2>
+              
+              {/* Weekly Tasks */}
+              <Grid2 xs={6}>
+                <Typography variant="h6" sx={{ mb: 2 }}>Weekly Tasks</Typography>
+                {weekly_tasks.length > 0 ? (
+                  weekly_tasks.map((weekly_task, index) => (
+                    <Paper
+                      key={index}
+                      elevation={2}
+                      sx={{ 
+                        p: 2, 
+                        mb: 2, 
+                        borderRadius: '10px',
+                        '&:hover': { backgroundColor: 'rgba(236, 230, 240, 0.4)' }, 
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        Weekly Task #{index + 1}
+                      </Typography>
+                      <Typography variant="subtitle2">
+                        {weekly_task.title}
+                      </Typography>
+                      <Typography variant="body2">
+                        {weekly_task.description}
+                      </Typography>
+                    </Paper>
+                  ))
+                ) : (
+                  <Typography variant="body2">No weekly tasks</Typography>
+                )}
+              </Grid2>
+            </Grid2>
+          </Box>
+        </Grid2>
+      </Grid2>
     </div>
-    </>
   );
 };
 

@@ -15,7 +15,6 @@ class AccessPermission:
         }
 
 class User(BaseEntity):
-    """Base user class for system authentication and role management."""
     
     def __init__(
         self,
@@ -24,16 +23,7 @@ class User(BaseEntity):
         password_hash: str,
         user_type: UserType = "user",
     ) -> None:
-        """Initialize a new User.
         
-        Args:
-            id: The user's unique identifier
-            username: The user's login username
-            password_hash: The user's hashed password
-            user_type: The type of user (defaults to "user")
-            email: The user's email address (optional)
-        """
-        # Use provided ID instead of generating one from BaseEntity
         self._id = id
         self._username = username
         self._password_hash = password_hash
@@ -46,22 +36,18 @@ class User(BaseEntity):
     
     @property
     def id(self) -> int:
-        """Get the user's ID."""
         return self._id
     
     @property
     def username(self) -> str:
-        """Get the user's username."""
         return self._username
     
     @property
     def password_hash(self) -> str:
-        """Get the user's hashed password (should only be used for authentication)."""
         return self._password_hash
     
     @property
     def user_type(self) -> UserType:
-        """Get the user's type."""
         return self._user_type
     
     
@@ -78,7 +64,6 @@ class User(BaseEntity):
         self._emergency_tasks.append(task)
         
     def to_dict(self) -> dict:
-        """Convert user to dictionary representation (for API responses)."""
         return {
             "id": self.id,
             "username": self.username,
