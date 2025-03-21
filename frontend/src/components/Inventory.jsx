@@ -3,8 +3,9 @@ import {
   Grid2, Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Paper, Button, AppBar, Box, Toolbar, 
   InputBase, TextField, Dialog, DialogTitle, DialogContent, DialogActions, 
-  FormControl, InputLabel, Select, MenuItem, styled, alpha 
+  FormControl, InputLabel, Select, MenuItem, styled, alpha, IconButton 
 } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from "@mui/icons-material/Search";
 import useUserData from "../hooks/useUserData";
 import useInventoryData from "../hooks/useInventoryData";
@@ -153,20 +154,18 @@ function Inventory() {
   return (
       <div className="parent-card">
         <Grid2 container spacing={2} sx={{ height: '100%',width: '100%' }}>
-          {/* Left column - User profile */}
+          <Grid2 size="auto">
           <UserProfile 
             usernames={usernames}
             roles={roles}
             access={access}
             profile_image_directory={profile_image_directory}
           />
-          
-          {/* Right column - Inventory table */}
-          <Grid2 xs={8} sx={{ display: 'flex', flexDirection: 'column', padding: 2, width: '85%' }}>
-            {/* Search bar header */}
-            <Box sx={{ flexGrow: 0, marginBottom: 2, borderRadius: '30px', backgroundColor: 'none' }}>
-              <AppBar position="static" sx={{ backgroundColor: 'none'}}>
-                <Toolbar sx={{ backgroundColor: 'none'}}>
+          </Grid2>
+          <Grid2 xs={8} size="grow" sx={{ display: 'flex', flexDirection: 'column', padding: 2 }}>
+            <Box sx={{ flexGrow: 0 }}>
+              <AppBar position="static">
+                <Toolbar>
                   <Typography
                     variant="h6"
                     noWrap
@@ -201,7 +200,6 @@ function Inventory() {
                     }}
                     sx={{ 
                       ml: 2, 
-                      backgroundColor: 'var(--accent-color)', 
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center'
@@ -213,7 +211,6 @@ function Inventory() {
               </AppBar>
             </Box>
 
-            {/* Table container */}
             <div className="table-container" style={{ 
               flexGrow: 1, 
               width: '100%', 
@@ -225,7 +222,6 @@ function Inventory() {
                 sx={{ 
                   height: '100%',
                   maxHeight: '100%',
-                  overflow: 'auto',
                   mt: 2,
                   backgroundColor: 'transparent',
                   boxShadow: 'none'
@@ -271,7 +267,7 @@ function Inventory() {
                             <Button
                               variant="contained"
                               size="small"
-                              sx={{ mr: 1, backgroundColor: 'var(--accent-color)', color: 'white' }}
+                              sx={{ mr: 1, color: 'white' }}
                               onClick={() => {
                                 setIsEditing(true);
                                 setCurrentItem({
@@ -301,7 +297,6 @@ function Inventory() {
           </Grid2>
         </Grid2>
         
-        {/* Dialog for Add/Edit Form */}
         <Dialog 
           open={showModal} 
           onClose={() => setShowModal(false)} 
@@ -311,6 +306,18 @@ function Inventory() {
           <DialogTitle>
             {isEditing ? 'Edit Medication' : 'Register New Medication'}
           </DialogTitle>
+          <IconButton
+      aria-label="close"
+      onClick={() => setShowModal(false)}
+      sx={{
+        position: 'absolute',
+        right: 8,
+        top: 8,
+        color: (theme) => theme.palette.grey[500],
+      }}
+    >
+      <CloseIcon />
+    </IconButton>
           <form onSubmit={handleSubmit}>
             <DialogContent>
               <TextField
@@ -338,7 +345,6 @@ function Inventory() {
                 value={currentItem.count}
                 onChange={handleInputChange}
                 required
-                inputProps={{ min: 0 }}
                 sx={{ mb: 2 }}
               />
               
@@ -377,7 +383,6 @@ function Inventory() {
                 value={currentItem.unit_price}
                 onChange={handleInputChange}
                 required
-                inputProps={{ min: 0, step: "0.01" }}
               />
             </DialogContent>
             <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
@@ -396,9 +401,6 @@ function Inventory() {
                 </Button>
               )}
               <Box>
-                <Button onClick={() => setShowModal(false)} color="primary" sx={{ mr: 1 }}>
-                  Cancel
-                </Button>
                 <Button type="submit" color="primary" variant="contained">
                   {isEditing ? 'Update' : 'Add Item'}
                 </Button>

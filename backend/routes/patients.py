@@ -152,7 +152,7 @@ def delete_patient(patient_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-@patients_bp.route('/api/patients/<int:patient_id>/history', methods=['POST'])
+@patients_bp.route('/api/patients/<int:patient_id>/history/add', methods=['POST'])
 @jwt_required()
 def add_patient_history(patient_id):
     current_username = get_jwt_identity()
@@ -166,13 +166,11 @@ def add_patient_history(patient_id):
     entry = data.get('entry')
     
     try:
-        # Find the patient
         patient = next((p for p in patients if p.id == patient_id), None)
         
         if not patient:
             return jsonify({'error': 'Patient not found'}), 404
         
-        # Add history entry
         result, message = patient.add_history_entry(entry)
         
         if not result:
@@ -184,3 +182,54 @@ def add_patient_history(patient_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    
+@patients_bp.route('/api/patients/<int:patient_id>/history/delete', methods=['DELETE'])
+@jwt_required()
+def delete_patient_history(patient_id):
+    current_username = get_jwt_identity()
+    user = find_user_by_username(current_username)
+    
+    if user.user_type not in ["admin", "doctor"]:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.json
+    index = data.get('index')
+    
+    if index is None:
+        return jsonify({'error': 'Index of history entry not provided'}), 400
+    
+    try:
+        patient = next((p for p in patients if p.id == patient_id), None)
+        
+        if not patient:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Check if index is valid
+        if index < 0 or index >= len(patient.history):
+            return jsonify({'error': 'Invalid history entry index'}), 400
+        
+        # Remove the history entry at specified index
+        removed_entry = patient.history.pop(index)
+        
+        return jsonify({
+            'message': 'History entry deleted successfully',
+            'deleted_entry': removed_entry
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+@patients_bp.route('/api/patients/<int:patient_id>/history', methods=['GET'])
+@jwt_required()
+def get_patient_history(patient_id):
+    current_username = get_jwt_identity()
+    user = find_user_by_username(current_username)
+    
+    if user.user_type not in ["admin", "doctor"]:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    patient = next((p for p in patients if p.id == patient_id), None)
+    if not patient:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    return jsonify({'histories': patient.history}), 200

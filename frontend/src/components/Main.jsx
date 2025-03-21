@@ -79,16 +79,15 @@ const Main = () => {
   return (
     <div className="parent-card">
       <Grid2 container spacing={2} sx={{ height: '100%', width: '100%' }}>
-        {/* User profile component */}
+        <Grid2 size="auto">
         <UserProfile 
           usernames={usernames}
           roles={roles}
           profile_image_directory={profile_image_directory}
           access={access}
         />
-        
-        {/* Right column - Main content */}
-        <Grid2 xs={8} sx={{ display: 'flex', flexDirection: 'column', padding: 2, width: '85%' }}>
+        </Grid2>
+        <Grid2 xs={8} size="grow" sx={{ display: 'flex', flexDirection: 'column', padding: 2 }}>
           <Box sx={{ flexGrow: 0, marginBottom: 2 }}>
             <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
               Welcome Back, <strong>{usernames[0]}</strong>
@@ -97,13 +96,13 @@ const Main = () => {
 
           {/* Carousel section */}
           <Box sx={{ 
-            flexGrow: 0, 
-            height: '40%', 
+            height: '40%',
+            width: '100%',
+            maxWidth: '100%', 
             mb: 2,
             borderRadius: '10px',
             boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
           }}>
-            {/* Carousel content stays the same */}
             <div style={{ position: 'relative', height: '100%', width: '100%' }}>
               <img 
                 src={slides[currentSlide]} 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from 'react-helmet';
 import "../styles/Login.css";
 
 import Button from "@mui/material/Button";
@@ -58,10 +59,9 @@ const Login = () => {
 
   return (
 <>
-<head>
+    <Helmet>
       <title>MedSoft - Login</title>
-
-    </head>
+    </Helmet>
     <div className="container-page">
       <main className="login-container">
       <div className="login-header">

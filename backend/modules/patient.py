@@ -205,7 +205,6 @@ class Patient(BaseEntity):
         return self._medications.copy()  
     
     def get_medication(self, medication_id: int) -> Optional[Medication]:
-        
         if not isinstance(medication_id, int) or medication_id <= 0:
             return None
             
@@ -253,7 +252,6 @@ class Patient(BaseEntity):
         return self._treatments.copy()  
     
     def get_treatment(self, treatment_id: int) -> Optional[Treatment]:
-        
         if not isinstance(treatment_id, int) or treatment_id <= 0:
             return None
             

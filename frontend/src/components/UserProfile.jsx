@@ -41,8 +41,9 @@ const UserProfile = ({ usernames, roles, profile_image_directory, access }) => {
           <Button 
             href={item.access_link} 
             key={index}
-            fullWidth 
-            sx={{ justifyContent: 'flex-start', padding: '0.5rem 1rem', margin: '0.25rem 0' }}
+            fullWidth
+            variant="contained" 
+            sx={{ justifyContent: 'flex-start', padding: '0.5rem 1rem', marginTop: '0.50rem' }}
           >
             {item.access}
           </Button>

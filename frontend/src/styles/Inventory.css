@@ -22,6 +22,10 @@ body, html{
 }
 
 .parent-card {
+  display:  flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   background: rgba( 255, 255, 255, 0.66 );
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37 );
   backdrop-filter: blur( 6px );
@@ -29,6 +33,9 @@ body, html{
   border-radius: 10px;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  padding: 20px;
+  overflow: hidden;
 }
 #logo{
   width: auto;

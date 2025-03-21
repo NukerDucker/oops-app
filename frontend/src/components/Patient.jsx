@@ -4,9 +4,12 @@ import {
   TableHead, TableRow, Paper, Divider, Button, AppBar, Box, Toolbar, 
   InputBase, TextField, Dialog, DialogTitle, DialogContent, DialogActions, 
   FormControl, InputLabel, Select, MenuItem, List, ListItem, ListItemText, 
-  styled, alpha 
+  styled, alpha, IconButton 
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import useUserData from "../hooks/useUserData";
 import usePatientData from "../hooks/usePatientData";
 import useMedicalServices from "../hooks/useMedicalServices";
@@ -65,7 +68,13 @@ const PatientList = () => {
   const {
     filteredPatients, searchTerm, setSearchTerm,
     error: patientError, isLoading: patientLoading,
-    addPatient, updatePatient, deletePatient
+    addPatient, updatePatient, deletePatient,
+    createPatient, updatePatientData,
+    fetchPatientHistory, addHistoryEntry,
+    updateHistoryEntry, deleteHistoryEntry,
+    fetchPatientDetails, addTreatment,
+    historyEntries, setHistoryEntries,
+    selectedPatientDetails, setSelectedPatientDetails
   } = usePatientData();
   
   const {
@@ -75,7 +84,6 @@ const PatientList = () => {
   } = useMedicalServices();
 
   // Local UI state
-  const [selectedPatientDetails, setSelectedPatientDetails] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showPatientInfoModal, setShowPatientInfoModal] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -88,78 +96,51 @@ const PatientList = () => {
     gender: '',
     contact: ''
   });
+  const [showTreatmentModal, setShowTreatmentModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [diagnosis, setDiagnosis] = useState('');
+  const [treatmentNotes, setTreatmentNotes] = useState('');
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [newHistoryEntry, setNewHistoryEntry] = useState("");
+  const [editingHistoryId, setEditingHistoryId] = useState(null);
+  const [editHistoryText, setEditHistoryText] = useState("");
 
   // Handle form submission for adding or editing patients
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (isEditing) {
-      fetch(`http://127.0.0.1:5000/api/patients/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ 
-          id: currentPatient.id,
-          name: currentPatient.name,
-          age: parseInt(currentPatient.age),
-          gender: currentPatient.gender,
-          contact: currentPatient.contact
-        }),
+      updatePatientData({ 
+        id: currentPatient.id,
+        name: currentPatient.name,
+        age: parseInt(currentPatient.age),
+        gender: currentPatient.gender,
+        contact: currentPatient.contact
       })
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to update patient");
-          return response.json();
-        })
-        .then(data => {
-          // Use the hook function instead of direct state manipulation
-          updatePatient(currentPatient);
-          setShowModal(false);
-          alert("Patient updated successfully!");
-        })
-        .catch(error => {
-          console.error("Error updating patient:", error);
-          alert("Failed to update patient: " + error.message);
-        });
+      .then(() => {
+        setShowModal(false);
+        alert("Patient updated successfully!");
+      })
+      .catch(error => {
+        console.error("Error updating patient:", error);
+        alert("Failed to update patient: " + error.message);
+      });
     } else {
       // Add new patient using hook
-      fetch("http://127.0.0.1:5000/api/patients/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ 
-          name: currentPatient.name,
-          age: parseInt(currentPatient.age),
-          gender: currentPatient.gender,
-          contact: currentPatient.contact
-        }),
+      createPatient({ 
+        name: currentPatient.name,
+        age: parseInt(currentPatient.age),
+        gender: currentPatient.gender,
+        contact: currentPatient.contact
       })
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to add patient");
-          return response.json();
-        })
-        .then(data => {
-          // Add the new patient to the list
-          const newPatient = {
-            id: data.id, // Assuming the API returns the new ID
-            name: currentPatient.name,
-            age: parseInt(currentPatient.age),
-            gender: currentPatient.gender,
-            contact: currentPatient.contact,
-            image: "Profile-Icon.png" // Default image
-          };
-          
-          addPatient(newPatient);
-          setShowModal(false);
-          alert("New patient added successfully!");
-        })
-        .catch(error => {
-          console.error("Error adding patient:", error);
-          alert("Failed to add patient: " + error.message);
-        });
+      .then(() => {
+        setShowModal(false);
+        alert("New patient added successfully!");
+      })
+      .catch(error => {
+        console.error("Error adding patient:", error);
+        alert("Failed to add patient: " + error.message);
+      });
     }
   };
 
@@ -173,18 +154,8 @@ const PatientList = () => {
 
   const handleDeletePatient = (patientId) => {
     if(window.confirm("Are you sure you want to delete this patient?")) {
-      fetch(`http://127.0.0.1:5000/api/patients/delete/${patientId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-      })
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to delete patient");
-          return response.json();
-        })
-        .then(data => {
-          deletePatient(patientId);
+      deletePatient(patientId)
+        .then(() => {
           alert("Patient deleted successfully!");
         })
         .catch(error => {
@@ -195,45 +166,70 @@ const PatientList = () => {
   };
 
   // Handle adding history entry
-  const handleAddHistoryEntry = (patientId) => {
-    const entry = window.prompt("Enter medical history entry:");
-    if (entry && entry.trim() !== "") {
-      fetch(`http://127.0.0.1:5000/api/patients/${patientId}/history`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ entry }),
+  const handleAddHistoryEntry = () => {
+    if (!newHistoryEntry.trim()) {
+      alert("Please enter a history entry");
+      return;
+    }
+    
+    addHistoryEntry(currentPatient.id, newHistoryEntry)
+      .then(() => {
+        setNewHistoryEntry("");
+        alert("History entry added successfully!");
       })
-        .then(response => {
-          if (!response.ok) throw new Error("Failed to add history entry");
-          return response.json();
-        })
-        .then(data => {
-          alert("History entry added successfully!");
+      .catch(error => {
+        console.error("Error adding history entry:", error);
+        alert("Failed to add history entry: " + error.message);
+      });
+  };
+
+  // Function to fetch patient history
+  const loadPatientHistory = (patientId) => {
+    fetchPatientHistory(patientId)
+      .catch(error => {
+        console.error("Error loading patient history:", error);
+        alert("Failed to load patient history: " + error.message);
+      });
+  };
+
+  // Update history entry
+  const handleUpdateHistoryEntry = (index) => {
+    if (!editHistoryText.trim()) {
+      alert("Please enter a valid history entry");
+      return;
+    }
+    
+    updateHistoryEntry(currentPatient.id, index, editHistoryText)
+      .then(() => {
+        setEditingHistoryId(null);
+        setEditHistoryText("");
+        alert("History entry updated successfully!");
+      })
+      .catch(error => {
+        console.error("Error updating history entry:", error);
+        alert("Failed to update history entry: " + error.message);
+      });
+  };
+
+  // Handle delete history entry
+  const handleDeleteHistoryEntry = (index) => {
+    if (window.confirm("Are you sure you want to delete this history entry?")) {
+      deleteHistoryEntry(currentPatient.id, index)
+        .then(() => {
+          // The hook should already update historyEntries state by filtering out the deleted entry
+          alert("History entry deleted successfully!");
         })
         .catch(error => {
-          console.error("Error adding history entry:", error);
-          alert("Failed to add history entry: " + error.message);
+          console.error("Error deleting history entry:", error);
+          alert("Failed to delete history entry: " + error.message);
         });
     }
   };
 
-  // Add this function to handle viewing patient details
+  // Handle viewing patient details
   const handleViewPatientDetails = (patient) => {
-    // Fetch detailed patient data including history, prescriptions, and lab results
-    fetch(`http://127.0.0.1:5000/api/patients/${patient.id}/details`, {
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      },
-    })
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to load patient details");
-        return response.json();
-      })
-      .then(data => {
-        setSelectedPatientDetails(data);
+    fetchPatientDetails(patient.id)
+      .then(() => {
         setShowPatientInfoModal(true);
       })
       .catch(error => {
@@ -242,37 +238,54 @@ const PatientList = () => {
       });
   };
 
-  // Modify the createPrescription function in useMedicalServices or add a wrapper function
+  // Create prescription
   const handleCreatePrescription = () => {
     if (!selectedMedication || !selectedDoctor || !currentPatient.id) {
       alert("Please select medication, doctor, and ensure patient is selected");
       return;
     }
     
-    fetch(`http://127.0.0.1:5000/api/prescriptions/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      },
-      body: JSON.stringify({
-        patient_id: currentPatient.id,
-        medication_id: selectedMedication,
-        doctor_id: selectedDoctor,
-        quantity: parseInt(prescriptionQuantity)
-      }),
+    createPrescription({
+      patient_id: currentPatient.id,
+      medication_id: selectedMedication,
+      doctor_id: selectedDoctor,
+      quantity: parseInt(prescriptionQuantity)
     })
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to create prescription");
-        return response.json();
-      })
-      .then(data => {
+      .then(() => {
         setShowPrescriptionModal(false);
         alert("Prescription created successfully!");
       })
       .catch(error => {
         console.error("Error creating prescription:", error);
         alert("Failed to create prescription: " + error.message);
+      });
+  };
+
+  // Refresh patient details
+  const refreshPatientDetails = (patientId) => {
+    if (patientId) {
+      fetchPatientDetails(patientId)
+        .then(() => {
+          // Increment refresh trigger to cause re-render
+          setRefreshTrigger(prev => prev + 1);
+        })
+        .catch(error => {
+          console.error("Error loading patient details:", error);
+        });
+    }
+  };
+
+  // Add treatment
+  const handleAddTreatment = (patientId, diagnosis, notes) => {
+    addTreatment(patientId, diagnosis, notes)
+      .then(() => {
+        alert("Treatment added successfully!");
+        // Refresh patient details to include the new treatment
+        refreshPatientDetails(patientId);
+      })
+      .catch(error => {
+        console.error("Error adding treatment:", error);
+        alert("Failed to add treatment: " + error.message);
       });
   };
 
@@ -318,20 +331,19 @@ const PatientList = () => {
   return (
       <div className="parent-card">
         <Grid2 container spacing={2} sx={{ height: '100%',width: '100%' }}>
-          {/* Left column - User profile using the UserProfile component */}
+          <Grid2 size="auto">
           <UserProfile 
             usernames={usernames}
             roles={roles}
             access={access}
             profile_image_directory={profile_image_directory}
           />
-          
+          </Grid2>
           {/* Right column - Patient table */}
-          <Grid2 xs={8} sx={{ display: 'flex', flexDirection: 'column', padding: 2, width: '85%' }}>
-            {/* Search bar header */}
-            <Box sx={{ flexGrow: 0, marginBottom: 2, borderRadius: '30px', backgroundColor: 'none' }}>
-              <AppBar position="static" sx={{ backgroundColor: 'none'}}>
-                <Toolbar sx={{ backgroundColor: 'none'}}>
+            <Grid2 xs={8} size="grow" sx={{ display: 'flex', flexDirection: 'column', padding: 2 }}>
+            <Box sx={{ flexGrow: 0 }}>
+              <AppBar position="static">
+                <Toolbar>
                   <Typography
                     variant="h6"
                     noWrap
@@ -377,8 +389,6 @@ const PatientList = () => {
                 </Toolbar>
               </AppBar>
             </Box>
-
-            {/* Table container */}
             <div className="table-container" style={{ 
               flexGrow: 1, 
               width: '100%', 
@@ -428,43 +438,85 @@ const PatientList = () => {
                               style={{ width: '50px', height: '50px', borderRadius: '50%' }}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Typography 
-                              variant="body1" 
-                              sx={{ 
-                                cursor: 'pointer', 
-                                textDecoration: 'underline',
-                                color: 'primary.main',
-                                '&:hover': { color: 'primary.dark' }
-                              }}
-                              onClick={() => handleViewPatientDetails(patient)}
-                            >
-                              {patient.name}
-                            </Typography>
+                          <TableCell 
+                            onClick={() => handleViewPatientDetails(patient)}
+                            sx={{ cursor: 'pointer', color: 'var(--accent-color)', fontWeight: 'bold' }}
+                          >
+                            {patient.name}
                           </TableCell>
                           <TableCell align="center">{patient.age}</TableCell>
                           <TableCell>{patient.gender}</TableCell>
                           <TableCell>{patient.contact}</TableCell>
                           <TableCell align="center">
-                            <Button
-                              variant="contained"
-                              size="small"
-                              sx={{ color: 'white' }}
-                              onClick={() => {
-                                setSelectedPatientId(patient.id);
-                                setIsEditing(true);
-                                setCurrentPatient({
-                                  id: patient.id,
-                                  name: patient.name,
-                                  age: patient.age.toString(),
-                                  gender: patient.gender,
-                                  contact: patient.contact
-                                });
-                                setShowModal(true);
-                              }}
-                            >
-                              Edit Patient
-                            </Button>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: 'row', 
+                              gap: 0.5,
+                              justifyContent: 'center'
+                            }}>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                sx={{ 
+                                  color: 'white', 
+mr: 1,
+                                }}
+                                onClick={() => {
+                                  setIsEditing(true);
+                                  setCurrentPatient({
+                                    id: patient.id,
+                                    name: patient.name,
+                                    age: patient.age,
+                                    gender: patient.gender,
+                                    contact: patient.contact
+                                  });
+                                  setShowModal(true);
+                                }}
+                              >
+                                Edit Info
+                              </Button>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                sx={{ 
+                                  color: 'white', 
+mr: 1,
+                                }}
+                                onClick={() => {
+                                  setCurrentPatient({
+                                    id: patient.id,
+                                    name: patient.name,
+                                    age: patient.age,
+                                    gender: patient.gender,
+                                    contact: patient.contact
+                                  });
+                                  loadPatientHistory(patient.id);
+                                  setShowHistoryModal(true);
+                                }}
+                              >
+                                Edit History
+                              </Button>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                sx={{ 
+                                  color: 'white', 
+mr: 1,
+                                }}
+                                onClick={() => {
+                                  setCurrentPatient({
+                                    id: patient.id,
+                                    name: patient.name,
+                                    age: patient.age,
+                                    gender: patient.gender,
+                                    contact: patient.contact
+                                  });
+                                  setShowPrescriptionModal(true);
+                                }}
+                              >
+                                Order Prescription
+                              </Button>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -478,777 +530,470 @@ const PatientList = () => {
               </TableContainer>
             </div>
           </Grid2>
-        </Grid2>
-        
-        {/* Dialog for Add/Edit Form */}
-        <Dialog 
-          open={showModal} 
-          onClose={() => setShowModal(false)} 
-          maxWidth="md" 
-          fullWidth
-        >
-          <DialogTitle>
-            {isEditing ? 'Manage Patient Information' : 'Register New Patient'}
-          </DialogTitle>
-          <form onSubmit={handleSubmit}>
-            <DialogContent>
-              <Grid2 container spacing={2}>
-                <Grid2 item xs={6}>
-                  <TextField
-                    margin="dense"
-                    id="name"
-                    name="name"
-                    label="Name"
-                    type="text"
-                    fullWidth
-                    variant="outlined"
-                    value={currentPatient.name}
+          </Grid2>
+          
+          {/* Add/Edit Patient Modal */}
+          <Dialog 
+            open={showModal} 
+            onClose={() => setShowModal(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              {isEditing ? "Edit Patient Information" : "Register New Patient"}
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowModal(false)}
+                sx={{ position: 'absolute', right: 8, top: 8 }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="name"
+                  label="Patient Name"
+                  name="name"
+                  autoFocus
+                  value={currentPatient.name || ''}
+                  onChange={handleInputChange}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="age"
+                  label="Age"
+                  name="age"
+                  type="number"
+                  value={currentPatient.age || ''}
+                  onChange={handleInputChange}
+                />
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="gender-label">Gender</InputLabel>
+                  <Select
+                    labelId="gender-label"
+                    id="gender"
+                    name="gender"
+                    value={currentPatient.gender || ''}
+                    label="Gender"
                     onChange={handleInputChange}
-                    required
-                  />
-                </Grid2>
-                <Grid2 item xs={3}>
-                  <TextField
-                    margin="dense"
-                    id="age"
-                    name="age"
-                    label="Age"
-                    type="number"
-                    fullWidth
-                    variant="outlined"
-                    value={currentPatient.age}
-                    onChange={handleInputChange}
-                    required
-                    inputProps={{ min: 0 }}
-                  />
-                </Grid2>
-                <Grid2 item xs={3}>
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <InputLabel id="gender-label">Gender</InputLabel>
-                    <Select
-                      labelId="gender-label"
-                      id="gender"
-                      name="gender"
-                      value={currentPatient.gender}
-                      label="Gender"
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <MenuItem value="">Select gender</MenuItem>
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <TextField
-                    margin="dense"
-                    id="contact"
-                    name="contact"
-                    label="Contact"
-                    type="text"
-                    fullWidth
-                    variant="outlined"
-                    value={currentPatient.contact}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <InputLabel id="medication-label">Medication</InputLabel>
-                    <Select
-                      labelId="medication-label"
-                      id="medication"
-                      name="medication"
-                      label="Medication"
-                      value={selectedMedication}
-                      onChange={handleMedicationChange}
-                    >
-                      <MenuItem value="">Select medication</MenuItem>
-                      {medications.map(med => (
-                        <MenuItem key={med.id} value={med.id}>
-                          {med.name} - ${med.price}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid2>
-                
-                <Grid2 item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6">Patient Management</Typography>
-                </Grid2>
-                
-                <Grid2 item xs={6}>
-                  <Button 
-                    fullWidth
-                    variant="outlined" 
-                    onClick={() => handleAddHistoryEntry(currentPatient.id)}
                   >
-                    Add Medical History
-                  </Button>
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <Button 
-                    fullWidth
-                    variant="outlined" 
-                    onClick={() => {
-                      setShowModal(false);
-                      setShowPrescriptionModal(true);
-                    }}
-                  >
-                    Order Prescription
-                  </Button>
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <Button 
-                    fullWidth
-                    variant="outlined" 
-                    onClick={() => window.location.href = `/patient/${currentPatient.id}/lab-results`}
-                  >
-                    Manage Lab Results
-                  </Button>
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <Button 
-                    fullWidth
-                    variant="outlined" 
-                    onClick={() => window.location.href = `/patient/${currentPatient.id}/fees`}
-                  >
-                    Manage Fees
-                  </Button>
-                </Grid2>
-                <Grid2 item xs={6}>
-                  <Button 
-                    fullWidth
-                    variant="outlined" 
-                    onClick={() => window.location.href = `/patient/${currentPatient.id}/treatments`}
-                  >
-                    Manage Treatments
-                  </Button>
-                </Grid2>
-              </Grid2>
-            </DialogContent>
-            <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
-              {isEditing && (
-                <Button 
-                  onClick={() => {
-                    if(window.confirm("Are you sure you want to delete this patient?")) {
-                      handleDeletePatient(currentPatient.id);
-                      setShowModal(false);
-                    }
-                  }} 
-                  color="error" 
-                  variant="contained"
-                >
-                  Delete
-                </Button>
-              )}
-              <Box>
-                <Button onClick={() => setShowModal(false)} color="primary" sx={{ mr: 1 }}>
-                  Cancel
-                </Button>
-                <Button type="submit" color="primary" variant="contained">
-                  {isEditing ? 'Update' : 'Add Patient'}
-                </Button>
+                    <MenuItem value="Male">Male</MenuItem>
+                    <MenuItem value="Female">Female</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="contact"
+                  label="Contact Number"
+                  name="contact"
+                  value={currentPatient.contact || ''}
+                  onChange={handleInputChange}
+                />
               </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleSubmit} color="primary" variant="contained">
+                {isEditing ? "Update Patient" : "Add Patient"}
+              </Button>
             </DialogActions>
-          </form>
-        </Dialog>
-
-        {/* Patient Info Modal */}
-        <Dialog 
-          open={showPatientInfoModal} 
-          onClose={() => setShowPatientInfoModal(false)} 
-          maxWidth="md" 
-          fullWidth
-        >
-          {selectedPatientDetails && (
-            <>
-              <DialogTitle>
-                Patient Information
-              </DialogTitle>
-              <DialogContent>
-                <Grid2 container spacing={2}>
-                  <Grid2 item xs={12} display="flex" justifyContent="center" mb={2}>
-                    <img 
-                      src={selectedPatientDetails.image} 
-                      alt="patient" 
-                      style={{ width: '100px', height: '100px', borderRadius: '50%' }}
-                    />
-                  </Grid2>
-                  <Grid2 item xs={6}>
-                    <Typography variant="subtitle2">Name</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedPatientDetails.name}</Typography>
-                  </Grid2>
-                  <Grid2 item xs={3}>
-                    <Typography variant="subtitle2">Age</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedPatientDetails.age}</Typography>
-                  </Grid2>
-                  <Grid2 item xs={3}>
-                    <Typography variant="subtitle2">Gender</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedPatientDetails.gender}</Typography>
-                  </Grid2>
-                  <Grid2 item xs={6}>
-                    <Typography variant="subtitle2">Contact</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedPatientDetails.contact}</Typography>
-                  </Grid2>
-                  <Grid2 item xs={6}>
-                    <Typography variant="subtitle2">Patient ID</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedPatientDetails.id}</Typography>
-                  </Grid2>
+          </Dialog>
+          
+          {/* Patient Information Modal */}
+          <Dialog 
+            open={showPatientInfoModal} 
+            onClose={() => setShowPatientInfoModal(false)}
+            fullWidth
+            maxWidth="md"
+          >
+            <DialogTitle>
+              Patient Information
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowPatientInfoModal(false)}
+                sx={{ position: 'absolute', right: 8, top: 8 }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              {selectedPatientDetails && (
+                <>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Basic Information</Typography>
+                    <Grid2 container spacing={2}>
+                      <Grid2 xs={6}>
+                        <Typography><strong>Name:</strong> {selectedPatientDetails.name}</Typography>
+                        <Typography><strong>Age:</strong> {selectedPatientDetails.age}</Typography>
+                        <Typography><strong>Gender:</strong> {selectedPatientDetails.gender}</Typography>
+                      </Grid2>
+                      <Grid2 xs={6}>
+                        <Typography><strong>Contact:</strong> {selectedPatientDetails.contact}</Typography>
+                        <Typography><strong>Patient ID:</strong> {selectedPatientDetails.id}</Typography>
+                        <Typography><strong>Total Fees:</strong> ${selectedPatientDetails.fees_total?.toFixed(2) || "0.00"}</Typography>
+                      </Grid2>
+                    </Grid2>
+                  </Box>
                   
-                  <Grid2 item xs={12}>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6">Medical History</Typography>
-                    {selectedPatientDetails.history && selectedPatientDetails.history.length > 0 ? (
-                      <List>
-                        {selectedPatientDetails.history.map((entry, index) => (
-                          <ListItem key={index}>
-                            <ListItemText primary={entry.entry} secondary={new Date(entry.date).toLocaleDateString()} />
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Medical History</Typography>
+                    <List dense>
+                      {selectedPatientDetails.history?.length > 0 ? (
+                        selectedPatientDetails.history.map((entry, idx) => (
+                          <ListItem key={idx}>
+                            <ListItemText primary={entry} />
                           </ListItem>
-                        ))}
-                      </List>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">No medical history recorded</Typography>
-                    )}
-                  </Grid2>
+                        ))
+                      ) : (
+                        <ListItem>
+                          <ListItemText primary="No medical history available" />
+                        </ListItem>
+                      )}
+                    </List>
+                  </Box>
                   
-                  <Grid2 item xs={12}>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6">Prescriptions</Typography>
-                    {selectedPatientDetails.prescriptions && selectedPatientDetails.prescriptions.length > 0 ? (
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Medication</TableCell>
-                              <TableCell>Quantity</TableCell>
-                              <TableCell>Doctor</TableCell>
-                              <TableCell>Date</TableCell>
-                              <TableCell>Fee</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {selectedPatientDetails.prescriptions.map((prescription, index) => (
-                              <TableRow key={index}>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Prescriptions</Typography>
+                    <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Medication</TableCell>
+                            <TableCell>Quantity</TableCell>
+                            <TableCell>Prescribed By</TableCell>
+                            <TableCell>Cost</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedPatientDetails.prescriptions?.length > 0 ? (
+                            selectedPatientDetails.prescriptions.map((prescription, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{prescription.date}</TableCell>
                                 <TableCell>{prescription.medication_name}</TableCell>
                                 <TableCell>{prescription.quantity}</TableCell>
                                 <TableCell>{prescription.doctor_name}</TableCell>
-                                <TableCell>{new Date(prescription.date).toLocaleDateString()}</TableCell>
-                                <TableCell>${prescription.fee}</TableCell>
+                                <TableCell>${prescription.cost?.toFixed(2) || "N/A"}</TableCell>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">No prescriptions recorded</Typography>
-                    )}
-                  </Grid2>
-                  
-                  <Grid2 item xs={12}>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6">Lab Results</Typography>
-                    {selectedPatientDetails.lab_results && selectedPatientDetails.lab_results.length > 0 ? (
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
+                            ))
+                          ) : (
                             <TableRow>
-                              <TableCell>Test Name</TableCell>
-                              <TableCell>Result</TableCell>
-                              <TableCell>Date</TableCell>
+                              <TableCell colSpan={5} align="center">No prescriptions available</TableCell>
                             </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {selectedPatientDetails.lab_results.map((result, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{result.test_name}</TableCell>
-                                <TableCell>{result.result}</TableCell>
-                                <TableCell>{new Date(result.date).toLocaleDateString()}</TableCell>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                  
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Treatment Notes</Typography>
+                    <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Diagnosis</TableCell>
+                            <TableCell>Notes</TableCell>
+                            <TableCell>Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedPatientDetails.treatments?.length > 0 ? (
+                            selectedPatientDetails.treatments.map((treatment, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{treatment.date}</TableCell>
+                                <TableCell>{treatment.diagnosis}</TableCell>
+                                <TableCell>{treatment.notes}</TableCell>
+                                <TableCell>{treatment.completed ? "Completed" : "Ongoing"}</TableCell>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">No lab results recorded</Typography>
-                    )}
-                  </Grid2>
-                </Grid2>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setShowPatientInfoModal(false)} color="primary">
-                  Close
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setShowPatientInfoModal(false);
-                    setIsEditing(true);
-                    setCurrentPatient({
-                      id: selectedPatientDetails.id,
-                      name: selectedPatientDetails.name,
-                      age: selectedPatientDetails.age.toString(),
-                      gender: selectedPatientDetails.gender,
-                      contact: selectedPatientDetails.contact
-                    });
-                    setShowModal(true);
-                  }} 
-                  color="primary" 
-                  variant="contained"
-                >
-                  Manage Patient
-                </Button>
-              </DialogActions>
-            </>
-          )}
-        </Dialog>
-
-        {/* Prescription Order Modal */}
-        <Dialog
-          open={showPrescriptionModal}
-          onClose={() => setShowPrescriptionModal(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Order Prescription</DialogTitle>
-          <DialogContent>
-            <Grid2 container spacing={2}>
-              <Grid2 item xs={12}>
-                <FormControl fullWidth sx={{ mt: 1 }}>
-                  <InputLabel id="prescription-med-label">Medication</InputLabel>
-                  <Select
-                    labelId="prescription-med-label"
-                    id="prescription-medication"
-                    value={selectedMedication}
-                    label="Medication"
-                    onChange={handleMedicationChange}
-                    required
-                  >
-                    <MenuItem value="">Select medication</MenuItem>
-                    {medications.map(med => (
-                      <MenuItem key={med.id} value={med.id}>
-                        {med.name} - ${med.price}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid2>
-              
-              <Grid2 item xs={6}>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={4} align="center">No treatment notes available</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+          {/* Treatment Modal */}
+          <Dialog 
+            open={showTreatmentModal} 
+            onClose={() => setShowTreatmentModal(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              Add Treatment for {currentPatient.name}
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowTreatmentModal(false)}
+                sx={{ position: 'absolute', right: 8, top: 8 }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Box component="form" sx={{ mt: 2 }} noValidate>
                 <TextField
-                  margin="dense"
-                  id="quantity"
-                  label="Quantity"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={prescriptionQuantity}
-                  onChange={handleQuantityChange}
+                  margin="normal"
                   required
-                  inputProps={{ min: 1 }}
+                  fullWidth
+                  id="diagnosis"
+                  label="Diagnosis"
+                  name="diagnosis"
+                  autoFocus
+                  value={diagnosis || ''}
+                  onChange={(e) => setDiagnosis(e.target.value)}
                 />
-              </Grid2>
-              
-              <Grid2 item xs={6}>
-                <FormControl fullWidth sx={{ mt: 1 }}>
-                  <InputLabel id="doctor-label">Doctor</InputLabel>
-                  <Select
-                    labelId="doctor-label"
-                    id="doctor"
-                    value={selectedDoctor}
-                    label="Doctor"
-                    onChange={(e) => setSelectedDoctor(e.target.value)}
-                    required
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  multiline
+                  rows={4}
+                  id="treatmentNotes"
+                  label="Treatment Notes"
+                  name="treatmentNotes"
+                  value={treatmentNotes || ''}
+                  onChange={(e) => setTreatmentNotes(e.target.value)}
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowTreatmentModal(false)}>Cancel</Button>
+              <Button 
+                onClick={() => {
+                  if (!diagnosis || !treatmentNotes) {
+                    alert("Please enter both diagnosis and treatment notes");
+                    return;
+                  }
+                  handleAddTreatment(currentPatient.id, diagnosis, treatmentNotes);
+                  setDiagnosis('');
+                  setTreatmentNotes('');
+                  setShowTreatmentModal(false);
+                }} 
+                color="primary" 
+                variant="contained"
+              >
+                Add Treatment
+              </Button>
+            </DialogActions>
+          </Dialog>
+          {/* History Modal */}
+          <Dialog 
+            open={showHistoryModal} 
+            onClose={() => setShowHistoryModal(false)}
+            fullWidth
+            maxWidth="md"
+          >
+            <DialogTitle>
+              Medical History for {currentPatient.name}
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowHistoryModal(false)}
+                sx={{ position: 'absolute', right: 8, top: 8 }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>Add New Entry</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    label="New Medical History Entry"
+                    value={newHistoryEntry}
+                    onChange={(e) => setNewHistoryEntry(e.target.value)}
+                  />
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    onClick={handleAddHistoryEntry}
                   >
-                    <MenuItem value="">Select doctor</MenuItem>
-                    {doctors.map(doctor => (
-                      <MenuItem key={doctor.id} value={doctor.id}>
-                        {doctor.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid2>
+                    Add Entry
+                  </Button>
+                </Box>
+              </Box>
               
-              <Grid2 item xs={12}>
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  Total Fee: ${calculatedFee.toFixed(2)}
-                </Typography>
-              </Grid2>
-            </Grid2>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowPrescriptionModal(false)} color="primary">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreatePrescription} 
-              color="primary" 
-              variant="contained"
-              disabled={!selectedMedication || !selectedDoctor}
-            >
-              Create Prescription
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </div>
-  );
-}
-
-// ...existing code...
-
-// Edit/Add Patient Modal
-const PatientFormModal = ({ open, onClose, onSubmit, currentPatient, isEditing, handleInputChange }) => {
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditing ? "Edit Patient" : "Add New Patient"}</DialogTitle>
-      <form onSubmit={onSubmit}>
-        <DialogContent dividers>
-          <Grid2 container spacing={2}>
-            <Grid2 item xs={12}>
-              <TextField
-                name="name"
-                label="Full Name"
-                value={currentPatient.name}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                margin="normal"
-              />
-            </Grid2>
-            <Grid2 item xs={12} sm={6}>
-              <TextField
-                name="age"
-                label="Age"
-                type="number"
-                value={currentPatient.age}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                margin="normal"
-                inputProps={{ min: 0 }}
-              />
-            </Grid2>
-            <Grid2 item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel id="gender-label">Gender</InputLabel>
-                <Select
-                  labelId="gender-label"
-                  name="gender"
-                  value={currentPatient.gender}
-                  onChange={handleInputChange}
-                  label="Gender"
-                >
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                  <MenuItem value="Other">Other</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid2>
-            <Grid2 item xs={12}>
-              <TextField
-                name="contact"
-                label="Contact Information"
-                value={currentPatient.contact}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                margin="normal"
-                placeholder="Phone number or email"
-              />
-            </Grid2>
-          </Grid2>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" color="primary">
-            {isEditing ? "Save Changes" : "Add Patient"}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
-  );
-};
-
-// ...existing code...
-
-// Prescription Order Modal
-const PrescriptionModal = ({ 
-  open, 
-  onClose, 
-  currentPatient,
-  medications,
-  doctors,
-  selectedMedication,
-  selectedDoctor,
-  prescriptionQuantity,
-  calculatedFee,
-  handleMedicationChange,
-  handleQuantityChange,
-  handleDoctorChange,
-  onCreatePrescription
-}) => {
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Order Prescription</DialogTitle>
-      <DialogContent dividers>
-        <Grid2 container spacing={2}>
-          <Grid2 item xs={12}>
-            <Typography variant="subtitle1" gutterBottom>
-              Patient: {currentPatient.name}
-            </Typography>
-          </Grid2>
-          
-          <Grid2 item xs={12}>
-            <FormControl fullWidth margin="normal" required>
-              <InputLabel id="medication-label">Medication</InputLabel>
-              <Select
-                labelId="medication-label"
-                value={selectedMedication}
-                onChange={handleMedicationChange}
-                label="Medication"
-              >
-                {medications.map((medication) => (
-                  <MenuItem key={medication.id} value={medication.id}>
-                    {medication.name} - ${medication.unit_price.toFixed(2)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid2>
-          
-          <Grid2 item xs={12}>
-            <FormControl fullWidth margin="normal" required>
-              <InputLabel id="doctor-label">Doctor</InputLabel>
-              <Select
-                labelId="doctor-label"
-                value={selectedDoctor}
-                onChange={(e) => handleDoctorChange(e.target.value)}
-                label="Doctor"
-              >
-                {doctors.map((doctor) => (
-                  <MenuItem key={doctor.id} value={doctor.id}>
-                    {doctor.username}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid2>
-          
-          <Grid2 item xs={12}>
-            <TextField
-              label="Quantity"
-              type="number"
-              value={prescriptionQuantity}
-              onChange={handleQuantityChange}
-              fullWidth
-              required
-              margin="normal"
-              inputProps={{ min: 1 }}
-            />
-          </Grid2>
-          
-          <Grid2 item xs={12}>
-            <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'background.paper' }}>
-              <Typography variant="h6" gutterBottom align="center">
-                Total Fee: ${calculatedFee.toFixed(2)}
-              </Typography>
-            </Paper>
-          </Grid2>
-        </Grid2>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button 
-          onClick={onCreatePrescription} 
-          variant="contained" 
-          color="primary"
-          disabled={!selectedMedication || !selectedDoctor}
-        >
-          Create Prescription
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-const PatientInfoModal = ({ open, onClose, patientDetails }) => {
-  if (!patientDetails) return null;
-  
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        Patient Information: {patientDetails.name}
-      </DialogTitle>
-      <DialogContent dividers>
-        <Grid2 container spacing={2}>
-          {/* Basic patient info */}
-          <Grid2 item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Patient Details</Typography>
-              <Typography><strong>ID:</strong> {patientDetails.id}</Typography>
-              <Typography><strong>Name:</strong> {patientDetails.name}</Typography>
-              <Typography><strong>Age:</strong> {patientDetails.age}</Typography>
-              <Typography><strong>Gender:</strong> {patientDetails.gender}</Typography>
-              <Typography><strong>Contact:</strong> {patientDetails.contact}</Typography>
-            </Paper>
-          </Grid2>
-          
-          {/* Medical history */}
-          <Grid2 item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Medical History</Typography>
-              {patientDetails.history && patientDetails.history.length > 0 ? (
-                <List dense>
-                  {patientDetails.history.map((entry, index) => (
-                    <ListItem key={index} divider={index < patientDetails.history.length - 1}>
-                      <ListItemText primary={entry} />
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="h6" gutterBottom>Patient History</Typography>
+              
+              {historyEntries.length > 0 ? (
+                <List>
+                  {historyEntries.map((entry, index) => (
+                    <ListItem 
+                      key={index} 
+                      divider 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start', 
+                        flexDirection: 'column',
+                        py: 2
+                      }}
+                    >
+                      {editingHistoryId === index ? (
+                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={2}
+                            value={editHistoryText}
+                            onChange={(e) => setEditHistoryText(e.target.value)}
+                          />
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            <Button 
+                              variant="outlined" 
+                              onClick={() => {
+                                setEditingHistoryId(null);
+                                setEditHistoryText("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              variant="contained" 
+                              onClick={() => handleUpdateHistoryEntry(index)}
+                            >
+                              Save
+                            </Button>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <>
+                          <ListItemText 
+                            primary={entry.history} 
+                            sx={{ mb: 1, width: '100%' }}
+                          />
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: 1 }}>
+                            <Button 
+                              size="small" 
+                              startIcon={<EditIcon />}
+                              onClick={() => {
+                                setEditingHistoryId(index);
+                                setEditHistoryText(entry.history);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="small" 
+                              color="error"
+                              startIcon={<DeleteIcon />}
+                              onClick={() => handleDeleteHistoryEntry(index)}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
+                        </>
+                      )}
                     </ListItem>
                   ))}
                 </List>
               ) : (
-                <Typography color="text.secondary">No medical history available</Typography>
+                <Typography variant="body1">No history entries available</Typography>
               )}
-            </Paper>
-          </Grid2>
-          
-          {/* Prescribed medications */}
-          <Grid2 item xs={12}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Prescribed Medications</Typography>
-              {patientDetails.prescriptions && patientDetails.prescriptions.length > 0 ? (
-                <TableContainer>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>Treatment Notes</Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    setDiagnosis('');
+                    setTreatmentNotes('');
+                    setShowTreatmentModal(true);
+                    setShowHistoryModal(false);
+                  }}
+                  sx={{ mb: 2 }}
+                >
+                  Add New Treatment
+                </Button>
+                
+                <TableContainer component={Paper}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Medication</TableCell>
-                        <TableCell>Dosage</TableCell>
-                        <TableCell>Doctor</TableCell>
-                        <TableCell align="right">Cost</TableCell>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Diagnosis</TableCell>
+                        <TableCell>Notes</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell align="center">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {patientDetails.prescriptions.map((prescription) => (
-                        <TableRow key={prescription.id}>
-                          <TableCell>{prescription.medication}</TableCell>
-                          <TableCell>{prescription.dosage}</TableCell>
-                          <TableCell>{prescription.doctor_name}</TableCell>
-                          <TableCell align="right">${prescription.amount.toFixed(2)}</TableCell>
+                      {selectedPatientDetails?.treatments?.length > 0 ? (
+                        selectedPatientDetails.treatments.map((treatment, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{treatment.date}</TableCell>
+                            <TableCell>{treatment.diagnosis}</TableCell>
+                            <TableCell>{treatment.notes}</TableCell>
+                            <TableCell>{treatment.completed ? "Completed" : "Ongoing"}</TableCell>
+                            <TableCell align="center">
+                              <Button 
+                                size="small" 
+                                variant="outlined"
+                                onClick={() => {
+                                  // Logic for editing treatment would go here
+                                  // For now just show an alert
+                                  alert("Edit treatment functionality to be implemented");
+                                }}
+                                sx={{ mr: 1 }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                color="error"
+                                onClick={() => {
+                                  // Logic for deleting treatment would go here
+                                  // For now just show an alert
+                                  alert("Delete treatment functionality to be implemented");
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">No treatment notes available</TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
-              ) : (
-                <Typography color="text.secondary">No prescriptions available</Typography>
-              )}
-            </Paper>
-          </Grid2>
-          
-          {/* Lab results */}
-          <Grid2 item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Lab Results</Typography>
-              {patientDetails.lab_results && patientDetails.lab_results.length > 0 ? (
-                <List dense>
-                  {patientDetails.lab_results.map((result) => (
-                    <ListItem key={result.id} divider>
-                      <ListItemText 
-                        primary={result.test_name}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2">
-                              Date: {result.test_date}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="body2">
-                              Result: {result.result}
-                            </Typography>
-                          </>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">No lab results available</Typography>
-              )}
-            </Paper>
-          </Grid2>
-          
-          {/* Fees and Treatments */}
-          <Grid2 item xs={12} md={6}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Treatments</Typography>
-              {patientDetails.treatments && patientDetails.treatments.length > 0 ? (
-                <List dense>
-                  {patientDetails.treatments.map((treatment) => (
-                    <ListItem key={treatment.id} divider>
-                      <ListItemText 
-                        primary={treatment.diagnosis}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2">
-                              Date: {treatment.treatment_date}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="body2">
-                              Notes: {treatment.notes}
-                            </Typography>
-                          </>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">No treatments available</Typography>
-              )}
-            </Paper>
-            
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Fees</Typography>
-              {patientDetails.fees && patientDetails.fees.length > 0 ? (
-                <>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Description</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                          <TableCell align="right">Paid</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {patientDetails.fees.map((fee) => (
-                          <TableRow key={fee.id}>
-                            <TableCell>{fee.description}</TableCell>
-                            <TableCell align="right">${fee.amount.toFixed(2)}</TableCell>
-                            <TableCell align="right">{fee.is_paid ? "Yes" : "No"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 'bold' }}>
-                    Total: ${patientDetails.total_fees?.toFixed(2) || '0.00'}
-                  </Typography>
-                </>
-              ) : (
-                <Typography color="text.secondary">No fees available</Typography>
-              )}
-            </Paper>
-          </Grid2>
-        </Grid2>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowHistoryModal(false)}>Close</Button>
+            </DialogActions>
+          </Dialog>
+  </div>
+         );       
+        };
+
+
 
 export default PatientList;
