@@ -18,13 +18,11 @@ class User(BaseEntity):
     
     def __init__(
         self,
-        id: int,
         username: str, 
         password_hash: str,
         user_type: UserType = "user",
     ) -> None:
-        
-        self._id = id
+        super().__init__()
         self._username = username
         self._password_hash = password_hash
         self._user_type = user_type

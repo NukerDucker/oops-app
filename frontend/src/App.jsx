@@ -4,6 +4,7 @@ import Login from './components/Login.jsx';
 import Inventory from './components/Inventory.jsx';
 import Main from './components/Main.jsx';
 import Patient from './components/Patient.jsx';
+import Appointments from './components/Appointments.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="/inventory" element={ <ProtectedRoute> <Inventory /> </ProtectedRoute>}/>
             <Route path="/main" element={<ProtectedRoute> <Main /> </ProtectedRoute>} />
             <Route path="/patient" element={<ProtectedRoute> <Patient /> </ProtectedRoute>} />
+            <Route path="/appointments" element={<ProtectedRoute> <Appointments /> </ProtectedRoute>} />
         </Routes>
       </Router>
       </>

@@ -1,23 +1,33 @@
 from typing import Tuple, List, Optional
 from .base_entity import BaseEntity
+from .medication import Medication
+from datetime import date
 
 class Prescription(BaseEntity):
     def __init__(
         self, 
         patient_id: int,
         doctor_id: int,
-        medication: str, 
-        dosage: str,
-        amount: float
+        medication: Medication, 
+        date: date,
+        start_date: date,
+        end_date: date,
     ) -> None:
         super().__init__()
+        if not isinstance(start_date, date):
+            raise ValueError("Start date must be a date object")
+        self._start_date = start_date
+        
+        if not isinstance(end_date, date):
+            raise ValueError("End date must be a date object")
+        if end_date < start_date:
+            raise ValueError("End date cannot be before start date")
+        self._end_date = end_date
+        
         self._patient_id = patient_id
         self._doctor_id = doctor_id
         self._medication = medication
-        self._dosage = dosage
-        self._amount = amount
-        self._feedback: Tuple[bool, str] = (False, "")
-        self._is_approved = False
+        self._date = date
     
     @property
     def prescription_id(self) -> int:
@@ -36,25 +46,24 @@ class Prescription(BaseEntity):
         return self._medication
     
     @property
-    def dosage(self) -> str:
-        return self._dosage
-        
-    @property
-    def amount(self) -> float:
-        return self._amount
+    def start_date(self) -> date:
+        return self._start_date
     
     @property
-    def feedback(self) -> Tuple[bool, str]:
-        return self._feedback
-    
-    @feedback.setter
-    def feedback(self, value: Tuple[bool, str]) -> None:
-        self._feedback = value
-    
+    def end_date(self) -> date:
+        return self._end_date
+
     @property
-    def is_approved(self) -> bool:
-        return self._is_approved
-    
-    @is_approved.setter
-    def is_approved(self, value: bool) -> None:
-        self._is_approved = value
+    def date(self) -> date:
+        return self._date
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "patient_id": self._patient_id,
+            "doctor_id": self._doctor_id,
+            "medication": self._medication,
+            "start_date": self._start_date,
+            "end_date": self._end_date,
+            "date": self._date
+        }

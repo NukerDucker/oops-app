@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 from .base_entity import BaseEntity
-
+from .prescription import Prescription
 
 class Treatment(BaseEntity):
     
@@ -21,7 +21,7 @@ class Treatment(BaseEntity):
         self._finished = finished
     
     @property
-    def Treatment_id(self) -> int:
+    def treatment_id(self) -> int:
         return self.id
         
     @property
@@ -48,12 +48,12 @@ class Treatment(BaseEntity):
     def finished(self, state: bool) -> None:
         self._finished = state
     
-    def get_summary(self) -> str:
-        return (
-            f"Treatment ID: {self.id}\n"
-            f"Symptoms    : {self._symptoms}\n"
-            f"Diagnosis   : {self._diagnosis}\n"
-            f"Treatment   : {self._treatment}\n"
-            f"Date        : {self._date}\n"
-            f"Status      : {'Completed' if self._finished else 'Ongoing'}"
-        )
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "symptoms": self._symptoms,
+            "diagnosis": self._diagnosis,
+            "treatment": self._treatment,
+            "date": self._date.isoformat() if self._date else None,
+            "finished": self._finished
+        }

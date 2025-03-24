@@ -1,76 +1,82 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+from modules.system import System
+from modules.appointment import Appointment
 
 appointments_bp = Blueprint('appointments', __name__)
 
-# These will be imported from app.py
-appointments = []
-patients = []
-users = []
+# Add this initialization function
+def init_appointments_routes(blueprint, system):
+    """Initialize appointment routes with system dependency"""
+    global system_service
+    system_service = system
+    return blueprint
 
-def find_user_by_username(username):
-    for user in users:
-        if user.username == username:
-            return user
-    return None
+# Set a default system for direct imports
+system_service = System()
 
 @appointments_bp.route('/api/appointments', methods=['GET'])
 @jwt_required()
 def get_appointments():
     current_username = get_jwt_identity()
-    user = find_user_by_username(current_username)
+    user = system_service.get_user_from_username(current_username)
     
-    # Simple authorization check
-    if user.user_type not in ["admin", "doctor"]:
+    if user.user_type not in ["admin", "doctor", "receptionist"]:
         return jsonify({'error': 'Unauthorized'}), 403
     
-    # For doctors, only return their appointments
-    filtered_appointments = appointments
-    if user.user_type == "doctor":
-        filtered_appointments = [a for a in appointments if a.doctor_id == user.id]
+    if user.user_type == "admin" or user.user_type == "receptionist":
+        appointments = list(system_service._appointments.values())
+    else:  
+        appointments = system_service.get_appointments(user)
     
-    # Return appointments
     return jsonify([{
         'id': a.id,
         'patient_id': a.patient_id,
-        'patient_name': next((p.name for p in patients if p.id == a.patient_id), "Unknown"),
+        'patient_name': system_service.get_patient_from_id(a.patient_id).name if system_service.get_patient_from_id(a.patient_id) else "Unknown",
         'doctor_id': a.doctor_id,
-        'doctor_name': next((u.username for u in users if u.id == a.doctor_id), "Unknown"),
+        'doctor_name': system_service.get_user(a.doctor_id).username if system_service.get_user(a.doctor_id) else "Unknown",
         'date': a.date.isoformat(),
         'time': a.time.isoformat(),
         'status': a.status
-    } for a in filtered_appointments]), 200
+    } for a in appointments]), 200
 
+# Add these routes to properly support the frontend
 @appointments_bp.route('/api/appointments/add', methods=['POST'])
 @jwt_required()
 def add_appointment():
     current_username = get_jwt_identity()
-    user = find_user_by_username(current_username)
+    user = system_service.get_user_from_username(current_username)
     
-    # Simple authorization check
     if user.user_type not in ["admin", "receptionist"]:
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.json
     
     try:
-        # Create new appointment
-        from modules.appointment import Appointment
+        # Get patient and doctor IDs
+        patient_id = int(data.get('patient_id'))
+        doctor_id = int(data.get('doctor_id'))
+        
+        # Convert date and time strings to objects
+        appointment_date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
+        appointment_time = datetime.strptime(data.get('time'), '%H:%M').time()
+        
+        # Create appointment
         new_appointment = Appointment(
-            int(data.get('patient_id')),
-            int(data.get('doctor_id')),
-            datetime.strptime(data.get('date'), '%Y-%m-%d').date(),
-            datetime.strptime(data.get('time'), '%H:%M').time()
+            patient_id=patient_id,
+            doctor_id=doctor_id,
+            date=appointment_date,
+            time=appointment_time
         )
         
-        # Add to appointments list
-        appointments.append(new_appointment)
+        # Add to system
+        result, message = system_service.add_appointment(new_appointment)
         
-        return jsonify({
-            'message': 'Appointment added successfully',
-            'id': new_appointment.id
-        }), 201
+        if not result:
+            return jsonify({'error': message}), 400
+            
+        return jsonify({'id': new_appointment.id, 'message': 'Appointment added successfully'}), 201
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
@@ -79,61 +85,37 @@ def add_appointment():
 @jwt_required()
 def update_appointment():
     current_username = get_jwt_identity()
-    user = find_user_by_username(current_username)
+    user = system_service.get_user_from_username(current_username)
     
-    # Simple authorization check
     if user.user_type not in ["admin", "receptionist"]:
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.json
-    appointment_id = data.get('id')
     
     try:
-        # Find the appointment
-        appointment = next((a for a in appointments if a.id == appointment_id), None)
+        appointment_id = int(data.get('id'))
+        appointment = system_service._appointments.get(appointment_id)
         
         if not appointment:
             return jsonify({'error': 'Appointment not found'}), 404
         
-        # Update appointment fields
-        appointment.patient_id = int(data.get('patient_id'))
-        appointment.doctor_id = int(data.get('doctor_id'))
-        appointment.date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
-        appointment.time = datetime.strptime(data.get('time'), '%H:%M').time()
-        
-        if data.get('status'):
+        # Update fields
+        if 'patient_id' in data:
+            appointment.update_patient_id(int(data.get('patient_id')))
+            
+        if 'doctor_id' in data:
+            appointment.update_doctor_id(int(data.get('doctor_id')))
+            
+        if 'date' in data:
+            appointment.update_date(datetime.strptime(data.get('date'), '%Y-%m-%d').date())
+            
+        if 'time' in data:
+            appointment.update_time(datetime.strptime(data.get('time'), '%H:%M').time())
+            
+        if 'status' in data:
             appointment.update_status(data.get('status'))
-        
-        return jsonify({
-            'message': 'Appointment updated successfully'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-@appointments_bp.route('/api/appointments/delete/<int:appointment_id>', methods=['DELETE'])
-@jwt_required()
-def delete_appointment(appointment_id):
-    current_username = get_jwt_identity()
-    user = find_user_by_username(current_username)
-    
-    # Simple authorization check
-    if user.user_type not in ["admin", "receptionist"]:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    try:
-        # Find the appointment
-        appointment_index = next((i for i, a in enumerate(appointments) if a.id == appointment_id), None)
-        
-        if appointment_index is None:
-            return jsonify({'error': 'Appointment not found'}), 404
-        
-        # Remove the appointment
-        appointments.pop(appointment_index)
-        
-        return jsonify({
-            'message': 'Appointment deleted successfully'
-        }), 200
+            
+        return jsonify({'message': 'Appointment updated successfully'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
@@ -142,28 +124,45 @@ def delete_appointment(appointment_id):
 @jwt_required()
 def update_appointment_status(appointment_id):
     current_username = get_jwt_identity()
-    user = find_user_by_username(current_username)
+    user = system_service.get_user_from_username(current_username)
     
-    # Simple authorization check
     if user.user_type not in ["admin", "receptionist", "doctor"]:
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.json
-    status = data.get('status')
     
     try:
-        # Find the appointment
-        appointment = next((a for a in appointments if a.id == appointment_id), None)
+        appointment = system_service._appointments.get(appointment_id)
         
         if not appointment:
             return jsonify({'error': 'Appointment not found'}), 404
+            
+        result, message = appointment.update_status(data.get('status'))
         
-        # Update status
-        appointment.update_status(status)
+        if not result:
+            return jsonify({'error': message}), 400
+            
+        return jsonify({'message': 'Appointment status updated successfully'}), 200
         
-        return jsonify({
-            'message': 'Appointment status updated successfully'
-        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@appointments_bp.route('/api/appointments/delete/<int:appointment_id>', methods=['DELETE'])
+@jwt_required()
+def delete_appointment(appointment_id):
+    current_username = get_jwt_identity()
+    user = system_service.get_user_from_username(current_username)
+    
+    if user.user_type not in ["admin", "receptionist"]:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        result, message = system_service.delete_appointment(appointment_id)
+        
+        if not result:
+            return jsonify({'error': message}), 400
+            
+        return jsonify({'message': 'Appointment deleted successfully'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400

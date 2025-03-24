@@ -48,3 +48,14 @@ class Fee(BaseEntity):
     
     def mark_as_paid(self) -> None:
         self._paid = True
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "patient_id": self._patient_id,
+            "amount": self._amount,
+            "fee_type": self._fee_type,
+            "description": self._description,
+            "date": self._date,
+            "paid": self._paid
+        }

@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from modules.system import System
 from datetime import date, timedelta
 
 financials_bp = Blueprint('financials', __name__)
@@ -14,6 +15,12 @@ def find_user_by_username(username):
         if user.username == username:
             return user
     return None
+
+def init_financials_routes(blueprint, system):
+    """Initialize financial routes with system dependency"""
+    global system_service
+    system_service = system
+    return blueprint
 
 @financials_bp.route('/api/patients/<int:patient_id>/fees', methods=['POST'])
 @jwt_required()

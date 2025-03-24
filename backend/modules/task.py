@@ -1,6 +1,7 @@
-class Task:
-    def __init__(self, id, title, description):
-        self.id = id
+from .base_entity import BaseEntity
+class Task(BaseEntity):
+    def __init__(self, title, description):
+        super().__init__()
         self.title = title
         self.description = description
     

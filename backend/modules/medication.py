@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 from datetime import date
 from .base_entity import BaseEntity
 
@@ -8,13 +8,12 @@ class Medication(BaseEntity):
         self,
         patient_id: int,
         name: str,
-        dosage: str,
+        quantity: str,
         start_date: date,
         end_date: date,
-        notes: str = ""
+        notes: str
     ) -> None:
         super().__init__()
-        
         
         if not isinstance(patient_id, int) or patient_id <= 0:
             raise ValueError("Patient ID must be a positive integer")
@@ -24,9 +23,9 @@ class Medication(BaseEntity):
             raise ValueError("Medication name must be a non-empty string")
         self._name = name
         
-        if not isinstance(dosage, str) or not dosage.strip():
-            raise ValueError("Dosage must be a non-empty string")
-        self._dosage = dosage
+        if not isinstance(quantity, str) or not quantity.strip():
+            raise ValueError("Quantity must be a non-empty string")
+        self._quantity = quantity
         
         if not isinstance(start_date, date):
             raise ValueError("Start date must be a date object")
@@ -34,8 +33,6 @@ class Medication(BaseEntity):
         
         if not isinstance(end_date, date):
             raise ValueError("End date must be a date object")
-        if end_date < start_date:
-            raise ValueError("End date cannot be before start date")
         self._end_date = end_date
         
         if not isinstance(notes, str):
@@ -53,8 +50,8 @@ class Medication(BaseEntity):
         return self._name
     
     @property
-    def dosage(self) -> str:
-        return self._dosage
+    def quantity(self) -> str:
+        return self._quantity
     
     @property
     def start_date(self) -> date:
@@ -81,3 +78,21 @@ class Medication(BaseEntity):
             return False, "Error: Medication is already inactive"
         self._active = False
         return True, "Success: Medication discontinued"
+    
+    def update_notes(self, value: str) -> Tuple[bool, str]:
+        if not isinstance(value, str):
+            return False, "Error: Notes must be a string"
+        self._notes = value
+        return True, "Success: Notes updated"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "patient_id": self._patient_id,
+            "name": self._name,
+            "quantity": self._quantity,
+            "start_date": self._start_date.isoformat() if self._start_date else None,
+            "end_date": self._end_date.isoformat() if self._end_date else None,
+            "notes": self._notes,
+            "active": self._active
+        }

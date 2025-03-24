@@ -229,25 +229,6 @@ const usePatientData = () => {
       });
   };
 
-  // Treatment operations
-  const addTreatment = (patientId, diagnosis, notes) => {
-    return fetch(`http://127.0.0.1:5000/api/treatments/add`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      },
-      body: JSON.stringify({
-        patient_id: patientId,
-        diagnosis,
-        notes
-      }),
-    })
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to add treatment");
-        return response.json();
-      });
-  };
 
   // Create new patient
   const createPatient = (patientData) => {
@@ -299,6 +280,70 @@ const usePatientData = () => {
       });
   };
 
+  // Add treatment
+  const addTreatment = (patientId, treatmentData) => {
+    return fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify(treatmentData),
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to add treatment");
+        return response.json();
+      });
+  };
+
+  // Update treatment
+  const updateTreatment = (patientId, treatmentId, treatmentData) => {
+    return fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments/${treatmentId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify(treatmentData),
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to update treatment");
+        return response.json();
+      });
+  };
+
+  const loadPatientTreatments = (patientId) => {
+    fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to fetch treatments");
+        return response.json();
+      })
+      .then(data => {
+        setPatientTreatments(data);
+      })
+      .catch(error => {
+        console.error("Error loading patient treatments:", error);
+      });
+  };
+
+  // Delete treatment
+  const deleteTreatment = (patientId, treatmentId) => {
+    return fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments/${treatmentId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to delete treatment");
+        return response.json();
+      });
+  };
+
   return {
     patientList,
     filteredPatients,
@@ -323,6 +368,8 @@ const usePatientData = () => {
     fetchPatientDetails,
     // Treatment operations
     addTreatment,
+    updateTreatment,
+    deleteTreatment,
     // Patient submission
     createPatient,
     updatePatientData,

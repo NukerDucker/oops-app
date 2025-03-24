@@ -51,3 +51,12 @@ class Supply(BaseEntity):
     
     def total_value(self) -> float:
         return self._quantity * self._unit_price
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self._name,
+            "quantity": self._quantity,
+            "unit_price": self._unit_price,
+            "category": self._category
+        }

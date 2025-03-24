@@ -1,6 +1,10 @@
-from datetime import date, time
-from typing import Optional, Tuple
+from datetime import date as date_type, time as time_type
+from typing import Optional, Tuple, Literal
 from .base_entity import BaseEntity
+
+# Define valid status values as lowercase to ensure consistency
+StatusType = Literal["scheduled", "completed", "cancelled", "no-show"]
+VALID_STATUSES = ["scheduled", "completed", "cancelled", "no-show"]
 
 class Appointment(BaseEntity):
     
@@ -8,33 +12,37 @@ class Appointment(BaseEntity):
         self, 
         patient_id: int, 
         doctor_id: int, 
-        appointment_date: date, 
-        appointment_time: time
+        date: date_type, 
+        time: time_type,
+        status: str = "scheduled",
+        about: Optional[str] = None
     ) -> None:
         super().__init__()  
-        
         
         if not isinstance(patient_id, int) or patient_id <= 0:
             raise ValueError("Patient ID must be a positive integer")
         self._patient_id = patient_id
         
-        
         if not isinstance(doctor_id, int) or doctor_id <= 0:
             raise ValueError("Doctor ID must be a positive integer")
         self._doctor_id = doctor_id
         
-        
-        if not isinstance(appointment_date, date):
+        if not isinstance(date, date_type):
             raise ValueError("Appointment date must be a date object")
-        self._date = appointment_date
+        self._date = date
         
-        
-        if not isinstance(appointment_time, time):
+        if not isinstance(time, time_type):
             raise ValueError("Appointment time must be a time object")
-        self._time = appointment_time
+        self._time = time
         
+        # Normalize status to lowercase
+        status_lower = status.lower() if status else "scheduled"
+        if status_lower not in VALID_STATUSES:
+            raise ValueError(f"Status must be one of {VALID_STATUSES}")
+        self._status = status_lower
         
-        self._status = "scheduled"  
+        # Initialize about field
+        self._about = about
     
     @property
     def appointment_id(self) -> int:
@@ -61,21 +69,21 @@ class Appointment(BaseEntity):
         return True, "Success: Doctor ID updated"
     
     @property
-    def date(self) -> date:
+    def date(self) -> date_type:
         return self._date
     
-    def update_date(self, value: date) -> Tuple[bool, str]:
-        if not isinstance(value, date):
+    def update_date(self, value: date_type) -> Tuple[bool, str]:
+        if not isinstance(value, date_type):
             return False, "Error: Date must be a date object"
         self._date = value
         return True, "Success: Appointment date updated"
     
     @property
-    def time(self) -> time:
+    def time(self) -> time_type:
         return self._time
     
-    def update_time(self, value: time) -> Tuple[bool, str]:
-        if not isinstance(value, time):
+    def update_time(self, value: time_type) -> Tuple[bool, str]:
+        if not isinstance(value, time_type):
             return False, "Error: Time must be a time object"
         self._time = value
         return True, "Success: Appointment time updated"
@@ -85,10 +93,10 @@ class Appointment(BaseEntity):
         return self._status
     
     def update_status(self, value: str) -> Tuple[bool, str]:
-        valid_statuses = ["scheduled", "completed", "cancelled", "no-show"]
-        if not isinstance(value, str) or value not in valid_statuses:
-            return False, f"Error: Status must be one of {valid_statuses}"
-        self._status = value
+        value_lower = value.lower() if value else ""
+        if not isinstance(value, str) or value_lower not in VALID_STATUSES:
+            return False, f"Error: Status must be one of {VALID_STATUSES}"
+        self._status = value_lower
         return True, "Success: Appointment status updated"
     
     def is_completed(self) -> bool:
@@ -114,3 +122,25 @@ class Appointment(BaseEntity):
             return False, "Error: Only scheduled appointments can be marked as no-show"
         self._status = "no-show"
         return True, "Success: Appointment marked as no-show"
+
+    @property
+    def about(self) -> Optional[str]:
+        return self._about
+    
+    def update_about(self, value: str) -> Tuple[bool, str]:
+        if not isinstance(value, str):
+            return False, "Error: About must be a string"
+        self._about = value
+        return True, "Success: Appointment about updated"
+    
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "patient_id": self._patient_id,
+            "doctor_id": self._doctor_id,
+            "date": self._date.isoformat() if self._date else None,
+            "time": self._time.isoformat() if self._time else None,
+            "status": self._status,
+            "about": self._about
+        }
+

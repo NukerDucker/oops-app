@@ -3,7 +3,8 @@ import {
   Grid2, Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Paper, Button, AppBar, Box, Toolbar, 
   InputBase, TextField, Dialog, DialogTitle, DialogContent, DialogActions, 
-  FormControl, InputLabel, Select, MenuItem, styled, alpha, IconButton 
+  FormControl, InputLabel, Select, MenuItem, styled, alpha, IconButton, 
+  Snackbar, Alert
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from "@mui/icons-material/Search";
@@ -77,30 +78,63 @@ function Inventory() {
     category: '',
     unit_price: ''
   });
+  
+  // Add snackbar state for better user feedback
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({...snackbar, open: false});
+  };
+
+  // Show snackbar message
+  const showMessage = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
 
   // Handle form submission for adding or editing items
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Validate form data
+    if (!currentItem.name || !currentItem.count || !currentItem.category || !currentItem.unit_price) {
+      showMessage('All fields are required', 'error');
+      return;
+    }
+    
+    // Validate numeric fields
+    if (isNaN(parseFloat(currentItem.unit_price)) || isNaN(parseInt(currentItem.count))) {
+      showMessage('Quantity and price must be valid numbers', 'error');
+      return;
+    }
+    
     if (isEditing) {
       updateInventoryItem(currentItem)
         .then(() => {
           setShowModal(false);
-          alert("Item updated successfully!");
+          showMessage("Item updated successfully!");
         })
         .catch((error) => {
           console.error("Error updating item:", error);
-          alert("Failed to update item: " + error.message);
+          showMessage(`Failed to update item: ${error.message}`, 'error');
         });
     } else {
       addInventoryItem(currentItem)
         .then(() => {
           setShowModal(false);
-          alert("New inventory item added successfully!");
+          showMessage("New inventory item added successfully!");
         })
         .catch(error => {
           console.error("Error adding inventory:", error);
-          alert("Failed to add inventory item: " + error.message);
+          showMessage(`Failed to add inventory item: ${error.message}`, 'error');
         });
     }
   };
@@ -118,11 +152,12 @@ function Inventory() {
   const handleRemoveItem = (itemId) => {
     removeInventoryItem(itemId)
       .then(() => {
-        alert("Item removed successfully!");
+        showMessage("Item removed successfully!");
+        setShowModal(false);
       })
       .catch((error) => {
         console.error("Error:", error);
-        alert("Failed to remove item: " + error.message);
+        showMessage(`Failed to remove item: ${error.message}`, 'error');
       });
   };
 
@@ -297,6 +332,7 @@ function Inventory() {
           </Grid2>
         </Grid2>
         
+        {/* Item Form Dialog */}
         <Dialog 
           open={showModal} 
           onClose={() => setShowModal(false)} 
@@ -305,19 +341,19 @@ function Inventory() {
         >
           <DialogTitle>
             {isEditing ? 'Edit Medication' : 'Register New Medication'}
+            <IconButton
+              aria-label="close"
+              onClick={() => setShowModal(false)}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
           </DialogTitle>
-          <IconButton
-      aria-label="close"
-      onClick={() => setShowModal(false)}
-      sx={{
-        position: 'absolute',
-        right: 8,
-        top: 8,
-        color: (theme) => theme.palette.grey[500],
-      }}
-    >
-      <CloseIcon />
-    </IconButton>
           <form onSubmit={handleSubmit}>
             <DialogContent>
               <TextField
@@ -378,6 +414,7 @@ function Inventory() {
                 name="unit_price"
                 label="Unit Price"
                 type="number"
+                inputProps={{ step: "0.01", min: "0" }}
                 fullWidth
                 variant="outlined"
                 value={currentItem.unit_price}
@@ -391,7 +428,6 @@ function Inventory() {
                   onClick={() => {
                     if(window.confirm("Are you sure you want to delete this item?")) {
                       handleRemoveItem(currentItem.id);
-                      setShowModal(false);
                     }
                   }} 
                   color="error" 
@@ -408,6 +444,23 @@ function Inventory() {
             </DialogActions>
           </form>
         </Dialog>
+        
+
+        <Snackbar 
+          open={snackbar.open} 
+          autoHideDuration={6000} 
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity={snackbar.severity} 
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </div>
   );
 }

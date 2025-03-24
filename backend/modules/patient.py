@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
+from datetime import date
 from .base_entity import BaseEntity
-from .lab_result import LabResult
 from .prescription import Prescription
 from .medication import Medication
 from .fee import Fee
@@ -39,7 +39,6 @@ class Patient(BaseEntity):
         
         
         self._history: List[str] = []
-        self._lab_results: List[LabResult] = []
         self._prescriptions: List[Prescription] = []
         self._medications: List[Medication] = []
         self._fees: List[Fee] = []
@@ -70,12 +69,31 @@ class Patient(BaseEntity):
         return self._history.copy()  
     
     def add_history_entry(self, entry: str) -> Tuple[bool, str]:
-        
         if not isinstance(entry, str) or not entry.strip():
             return False, "Error: History entry must be a non-empty string"
         
         self._history.append(entry)
         return True, "Success: History entry added"
+    
+    def add_treatment_to_history(self, treatment: Treatment) -> Tuple[bool, str]:
+        if not isinstance(treatment, Treatment):
+            return False, "Error: Invalid treatment object"
+        
+        date_str = treatment.date.isoformat() if hasattr(treatment, 'date') and treatment.date else "Unknown date"
+        history_entry = f"[{date_str}] Treatment: {treatment.diagnosis} - {treatment.treatment}"
+        
+        self._history.append(history_entry)
+        return True, "Success: Treatment added to history"
+    
+    def add_prescription_to_history(self, prescription: Prescription) -> Tuple[bool, str]:
+        if not isinstance(prescription, Prescription):
+            return False, "Error: Invalid prescription object"
+        
+        date_str = prescription.date.isoformat() if hasattr(prescription, 'date') and prescription.date else "Unknown date"
+        history_entry = f"[{date_str}] Prescription: {prescription.medication} - {prescription.dosage}"
+        
+        self._history.append(history_entry)
+        return True, "Success: Prescription added to history"
     
     @property
     def current_medications(self) -> List[Medication]:
@@ -92,58 +110,11 @@ class Patient(BaseEntity):
             "contact": self._contact,
             "history": self._history.copy(),
             "current_medications": current_meds,
-            "lab_results": self._lab_results.copy(),
+            "total_medications": len(self._medications),
+            "treatments": self._treatments.copy(),
+            "total_treatments": len(self._treatments),
             "total_fees": sum(fee.amount for fee in self._fees)
         }
-    
-    
-    def add_lab_result(self, lab_result: LabResult) -> Tuple[bool, str]:
-        
-        if not isinstance(lab_result, LabResult):
-            return False, "Error: Invalid lab result object"
-        
-        self._lab_results.append(lab_result)
-        return True, "Success: Lab result added"
-    
-    def get_lab_results(self) -> List[LabResult]:
-        return self._lab_results.copy()  
-    
-    def get_lab_result(self, lab_result_id: int) -> Optional[LabResult]:
-        
-        if not isinstance(lab_result_id, int) or lab_result_id <= 0:
-            return None
-            
-        for result in self._lab_results:
-            if result.id == lab_result_id:
-                return result
-        return None
-    
-    def update_lab_result(self, lab_result_id: int, updated_result: LabResult) -> Tuple[bool, str]:
-        
-        if not isinstance(lab_result_id, int) or lab_result_id <= 0:
-            return False, "Error: Invalid lab result ID"
-        if not isinstance(updated_result, LabResult):
-            return False, "Error: Invalid lab result object"
-        
-        for i, result in enumerate(self._lab_results):
-            if result.id == lab_result_id:
-                if lab_result_id != updated_result.id:
-                    return False, "Error: Cannot change lab result ID"
-                self._lab_results[i] = updated_result
-                return True, "Success: Lab result updated"
-        return False, "Error: Lab result not found"
-    
-    def remove_lab_result(self, lab_result_id: int) -> Tuple[bool, str]:
-        
-        if not isinstance(lab_result_id, int) or lab_result_id <= 0:
-            return False, "Error: Invalid lab result ID"
-            
-        for i, result in enumerate(self._lab_results):
-            if result.id == lab_result_id:
-                self._lab_results.pop(i)
-                return True, "Success: Lab result removed"
-        return False, "Error: Lab result not found"
-    
     
     def add_prescription(self, prescription: Prescription) -> Tuple[bool, str]:
         

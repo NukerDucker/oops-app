@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, Paper, Divider, Button, AppBar, Box, Toolbar, 
   InputBase, TextField, Dialog, DialogTitle, DialogContent, DialogActions, 
   FormControl, InputLabel, Select, MenuItem, List, ListItem, ListItemText, 
-  styled, alpha, IconButton 
+  styled, alpha, IconButton, FormControlLabel, Checkbox 
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
@@ -104,7 +104,11 @@ const PatientList = () => {
   const [newHistoryEntry, setNewHistoryEntry] = useState("");
   const [editingHistoryId, setEditingHistoryId] = useState(null);
   const [editHistoryText, setEditHistoryText] = useState("");
-
+  const [symptoms, setSymptoms] = useState('');
+  const [treatment, setTreatment] = useState('');
+  const [treatmentFinished, setTreatmentFinished] = useState(false);
+  const [editingTreatment, setEditingTreatment] = useState(null);
+  const [patientTreatments, setPatientTreatments] = useState([]); 
   // Handle form submission for adding or editing patients
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -226,7 +230,6 @@ const PatientList = () => {
     }
   };
 
-  // Handle viewing patient details
   const handleViewPatientDetails = (patient) => {
     fetchPatientDetails(patient.id)
       .then(() => {
@@ -288,6 +291,110 @@ const PatientList = () => {
         alert("Failed to add treatment: " + error.message);
       });
   };
+
+  // Add these handler functions
+
+// Open treatment modal for new treatment
+const handleOpenAddTreatment = () => {
+  // Reset form fields
+  setSymptoms('');
+  setDiagnosis('');
+  setTreatment('');
+  setTreatmentFinished(false);
+  setEditingTreatment(null);
+  setShowTreatmentModal(true);
+};
+
+// Open treatment modal for editing
+const handleOpenEditTreatment = (treatment) => {
+  setSymptoms(treatment.symptoms);
+  setDiagnosis(treatment.diagnosis);
+  setTreatment(treatment.treatment);
+  setTreatmentFinished(treatment.finished);
+  setEditingTreatment(treatment);
+  setShowTreatmentModal(true);
+};
+
+// Save or update treatment
+const handleSaveTreatment = () => {
+  if (!symptoms || !diagnosis || !treatment) {
+    alert('Please fill all required fields');
+    return;
+  }
+
+  const treatmentData = {
+    symptoms,
+    diagnosis,
+    treatment,
+    finished: treatmentFinished
+  };
+
+  if (editingTreatment) {
+    // Update existing treatment
+    updateTreatment(currentPatient.id, editingTreatment.id, treatmentData)
+      .then(() => {
+        // Refresh both data sources
+        refreshPatientDetails(currentPatient.id);
+        loadPatientTreatments(currentPatient.id);
+        // Close modal and reset form
+        setShowTreatmentModal(false);
+        setSymptoms('');
+        setDiagnosis('');
+        setTreatment('');
+        setTreatmentFinished(false);
+        setEditingTreatment(null);
+      })
+      .catch(error => console.error('Error updating treatment:', error));
+  } else {
+    // Add new treatment
+    addTreatment(currentPatient.id, treatmentData)
+      .then(() => {
+        // Refresh both data sources
+        refreshPatientDetails(currentPatient.id);
+        loadPatientTreatments(currentPatient.id);
+        // Close modal and reset form
+        setShowTreatmentModal(false);
+        setSymptoms('');
+        setDiagnosis('');
+        setTreatment('');
+        setTreatmentFinished(false);
+      })
+      .catch(error => console.error('Error adding treatment:', error));
+  }
+};
+
+// Delete treatment
+const handleDeleteTreatment = (treatmentId) => {
+  if (window.confirm('Are you sure you want to delete this treatment?')) {
+    deleteTreatment(currentPatient.id, treatmentId)
+      .then(() => {
+        // Refresh both data sources
+        refreshPatientDetails(currentPatient.id);
+        loadPatientTreatments(currentPatient.id);
+      })
+      .catch(error => console.error('Error deleting treatment:', error));
+  }
+};
+
+// Add this function to load patient treatments
+const loadPatientTreatments = (patientId) => {
+  fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
+    headers: {
+      "Authorization": `Bearer ${localStorage.getItem("token")}`
+    },
+  })
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch treatments");
+      return response.json();
+    })
+    .then(data => {
+      setPatientTreatments(data);
+    })
+    .catch(error => {
+      console.error("Error loading patient treatments:", error);
+      setPatientTreatments([]); // Clear treatments on error
+    });
+};
 
   // Handle errors from user data hook
   if (userDataError) return (
@@ -490,7 +597,11 @@ mr: 1,
                                     gender: patient.gender,
                                     contact: patient.contact
                                   });
+                                  // Reset treatments before loading new ones
+                                  setPatientTreatments([]);
+                                  setSelectedPatientDetails(null);
                                   loadPatientHistory(patient.id);
+                                  loadPatientTreatments(patient.id);
                                   setShowHistoryModal(true);
                                 }}
                               >
@@ -701,8 +812,9 @@ mr: 1,
                         <TableHead>
                           <TableRow>
                             <TableCell>Date</TableCell>
+                            <TableCell>Symptoms</TableCell>
                             <TableCell>Diagnosis</TableCell>
-                            <TableCell>Notes</TableCell>
+                            <TableCell>Treatment</TableCell>
                             <TableCell>Status</TableCell>
                           </TableRow>
                         </TableHead>
@@ -711,14 +823,15 @@ mr: 1,
                             selectedPatientDetails.treatments.map((treatment, idx) => (
                               <TableRow key={idx}>
                                 <TableCell>{treatment.date}</TableCell>
+                                <TableCell>{treatment.symptoms}</TableCell>
                                 <TableCell>{treatment.diagnosis}</TableCell>
-                                <TableCell>{treatment.notes}</TableCell>
-                                <TableCell>{treatment.completed ? "Completed" : "Ongoing"}</TableCell>
+                                <TableCell>{treatment.treatment}</TableCell>
+                                <TableCell>{treatment.finished ? "Completed" : "Ongoing"}</TableCell>
                               </TableRow>
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={4} align="center">No treatment notes available</TableCell>
+                              <TableCell colSpan={5} align="center">No treatment notes available</TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -737,7 +850,7 @@ mr: 1,
             maxWidth="sm"
           >
             <DialogTitle>
-              Add Treatment for {currentPatient.name}
+              {editingTreatment ? "Edit Treatment" : "Add Treatment"} for {currentPatient.name}
               <IconButton
                 aria-label="close"
                 onClick={() => setShowTreatmentModal(false)}
@@ -752,10 +865,20 @@ mr: 1,
                   margin="normal"
                   required
                   fullWidth
+                  id="symptoms"
+                  label="Symptoms"
+                  name="symptoms"
+                  autoFocus
+                  value={symptoms || ''}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
                   id="diagnosis"
                   label="Diagnosis"
                   name="diagnosis"
-                  autoFocus
                   value={diagnosis || ''}
                   onChange={(e) => setDiagnosis(e.target.value)}
                 />
@@ -765,31 +888,40 @@ mr: 1,
                   fullWidth
                   multiline
                   rows={4}
-                  id="treatmentNotes"
-                  label="Treatment Notes"
-                  name="treatmentNotes"
-                  value={treatmentNotes || ''}
-                  onChange={(e) => setTreatmentNotes(e.target.value)}
+                  id="treatment"
+                  label="Treatment"
+                  name="treatment"
+                  value={treatment || ''}
+                  onChange={(e) => setTreatment(e.target.value)}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={treatmentFinished}
+                      onChange={(e) => setTreatmentFinished(e.target.checked)}
+                      name="finished"
+                    />
+                  }
+                  label="Treatment Completed"
                 />
               </Box>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setShowTreatmentModal(false)}>Cancel</Button>
+              <Button onClick={() => {
+                setShowTreatmentModal(false);
+                setSymptoms('');
+                setDiagnosis('');
+                setTreatment('');
+                setTreatmentFinished(false);
+                setEditingTreatment(null);
+              }}>Cancel</Button>
               <Button 
-                onClick={() => {
-                  if (!diagnosis || !treatmentNotes) {
-                    alert("Please enter both diagnosis and treatment notes");
-                    return;
-                  }
-                  handleAddTreatment(currentPatient.id, diagnosis, treatmentNotes);
-                  setDiagnosis('');
-                  setTreatmentNotes('');
-                  setShowTreatmentModal(false);
-                }} 
+                onClick={handleSaveTreatment}
                 color="primary" 
                 variant="contained"
+                disabled={!symptoms || !diagnosis || !treatment}
               >
-                Add Treatment
+                {editingTreatment ? "Update Treatment" : "Add Treatment"}
               </Button>
             </DialogActions>
           </Dialog>
@@ -877,32 +1009,33 @@ mr: 1,
                           </Box>
                         </Box>
                       ) : (
-                        <>
-                          <ListItemText 
-                            primary={entry.history} 
-                            sx={{ mb: 1, width: '100%' }}
-                          />
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: 1 }}>
-                            <Button 
-                              size="small" 
-                              startIcon={<EditIcon />}
-                              onClick={() => {
-                                setEditingHistoryId(index);
-                                setEditHistoryText(entry.history);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="small" 
-                              color="error"
-                              startIcon={<DeleteIcon />}
-                              onClick={() => handleDeleteHistoryEntry(index)}
-                            >
-                              Delete
-                            </Button>
-                          </Box>
-                        </>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+  <ListItemText 
+    primary={entry.history} 
+    sx={{ flexGrow: 1 }}
+  />
+  <Box sx={{ display: 'flex', gap: 1, ml: 2, flexShrink: 0 }}>
+    <Button 
+      size="small" 
+      startIcon={<EditIcon />}
+      onClick={() => {
+        setEditingHistoryId(index);
+        setEditHistoryText(entry.history);
+      }}
+    >
+      Edit
+    </Button>
+    <Button 
+      size="small" 
+      color="error"
+      startIcon={<DeleteIcon />}
+      onClick={() => handleDeleteHistoryEntry(index)}
+    >
+      Delete
+    </Button>
+  </Box>
+</Box>
+                  
                       )}
                     </ListItem>
                   ))}
@@ -918,12 +1051,7 @@ mr: 1,
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={() => {
-                    setDiagnosis('');
-                    setTreatmentNotes('');
-                    setShowTreatmentModal(true);
-                    setShowHistoryModal(false);
-                  }}
+                  onClick={handleOpenAddTreatment}
                   sx={{ mb: 2 }}
                 >
                   Add New Treatment
@@ -934,8 +1062,9 @@ mr: 1,
                     <TableHead>
                       <TableRow>
                         <TableCell>Date</TableCell>
+                        <TableCell>Symptoms</TableCell>
                         <TableCell>Diagnosis</TableCell>
-                        <TableCell>Notes</TableCell>
+                        <TableCell>Treatment</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell align="center">Actions</TableCell>
                       </TableRow>
@@ -945,18 +1074,15 @@ mr: 1,
                         selectedPatientDetails.treatments.map((treatment, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{treatment.date}</TableCell>
+                            <TableCell>{treatment.symptoms}</TableCell>
                             <TableCell>{treatment.diagnosis}</TableCell>
-                            <TableCell>{treatment.notes}</TableCell>
-                            <TableCell>{treatment.completed ? "Completed" : "Ongoing"}</TableCell>
+                            <TableCell>{treatment.treatment}</TableCell>
+                            <TableCell>{treatment.finished ? "Completed" : "Ongoing"}</TableCell>
                             <TableCell align="center">
                               <Button 
                                 size="small" 
                                 variant="outlined"
-                                onClick={() => {
-                                  // Logic for editing treatment would go here
-                                  // For now just show an alert
-                                  alert("Edit treatment functionality to be implemented");
-                                }}
+                                onClick={() => handleOpenEditTreatment(treatment)}
                                 sx={{ mr: 1 }}
                               >
                                 Edit
@@ -965,11 +1091,7 @@ mr: 1,
                                 size="small" 
                                 variant="outlined" 
                                 color="error"
-                                onClick={() => {
-                                  // Logic for deleting treatment would go here
-                                  // For now just show an alert
-                                  alert("Delete treatment functionality to be implemented");
-                                }}
+                                onClick={() => handleDeleteTreatment(treatment.id)}
                               >
                                 Delete
                               </Button>
@@ -978,7 +1100,7 @@ mr: 1,
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} align="center">No treatment notes available</TableCell>
+                          <TableCell colSpan={6} align="center">No treatment notes available</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

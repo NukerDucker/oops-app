@@ -39,3 +39,12 @@ class FinancialReport(BaseEntity):
     
     def update_amount(self, new_amount: float) -> None:
         self._amount = new_amount
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "report_type": self._report_type,
+            "amount": self._amount,
+            "description": self._description,
+            "date": self._date
+        }
