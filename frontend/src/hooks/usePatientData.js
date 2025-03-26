@@ -260,26 +260,6 @@ const usePatientData = () => {
       });
   };
 
-  // Update existing patient
-  const updatePatientData = (patientData) => {
-    return fetch(`http://127.0.0.1:5000/api/patients/update`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      },
-      body: JSON.stringify(patientData),
-    })
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to update patient");
-        return response.json();
-      })
-      .then(data => {
-        updatePatient(patientData);
-        return data;
-      });
-  };
-
   // Add treatment
   const addTreatment = (patientId, treatmentData) => {
     return fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
@@ -372,7 +352,6 @@ const usePatientData = () => {
     deleteTreatment,
     // Patient submission
     createPatient,
-    updatePatientData,
   };
 };
 

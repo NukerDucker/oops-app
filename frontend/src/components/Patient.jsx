@@ -68,25 +68,19 @@ const PatientList = () => {
   const {
     filteredPatients, searchTerm, setSearchTerm,
     error: patientError, isLoading: patientLoading,
-    addPatient, updatePatient, deletePatient,
-    createPatient, updatePatientData,
+    updatePatient, deletePatient,
+    createPatient,
     fetchPatientHistory, addHistoryEntry,
     updateHistoryEntry, deleteHistoryEntry,
     fetchPatientDetails, addTreatment,
-    historyEntries, setHistoryEntries,
+    historyEntries, setHistoryEntries,deleteTreatment,
+    updateTreatment,
     selectedPatientDetails, setSelectedPatientDetails
   } = usePatientData();
-  
-  const {
-    medications, doctors, selectedMedication, selectedDoctor,
-    prescriptionQuantity, calculatedFee, handleMedicationChange,
-    handleQuantityChange, createPrescription
-  } = useMedicalServices();
 
   // Local UI state
   const [showModal, setShowModal] = useState(false);
   const [showPatientInfoModal, setShowPatientInfoModal] = useState(false);
-  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [currentPatient, setCurrentPatient] = useState({
@@ -109,12 +103,11 @@ const PatientList = () => {
   const [treatmentFinished, setTreatmentFinished] = useState(false);
   const [editingTreatment, setEditingTreatment] = useState(null);
   const [patientTreatments, setPatientTreatments] = useState([]); 
-  // Handle form submission for adding or editing patients
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (isEditing) {
-      updatePatientData({ 
+      updatePatient({ 
         id: currentPatient.id,
         name: currentPatient.name,
         age: parseInt(currentPatient.age),
@@ -241,29 +234,6 @@ const PatientList = () => {
       });
   };
 
-  // Create prescription
-  const handleCreatePrescription = () => {
-    if (!selectedMedication || !selectedDoctor || !currentPatient.id) {
-      alert("Please select medication, doctor, and ensure patient is selected");
-      return;
-    }
-    
-    createPrescription({
-      patient_id: currentPatient.id,
-      medication_id: selectedMedication,
-      doctor_id: selectedDoctor,
-      quantity: parseInt(prescriptionQuantity)
-    })
-      .then(() => {
-        setShowPrescriptionModal(false);
-        alert("Prescription created successfully!");
-      })
-      .catch(error => {
-        console.error("Error creating prescription:", error);
-        alert("Failed to create prescription: " + error.message);
-      });
-  };
-
   // Refresh patient details
   const refreshPatientDetails = (patientId) => {
     if (patientId) {
@@ -296,7 +266,6 @@ const PatientList = () => {
 
 // Open treatment modal for new treatment
 const handleOpenAddTreatment = () => {
-  // Reset form fields
   setSymptoms('');
   setDiagnosis('');
   setTreatment('');
@@ -555,80 +524,70 @@ const loadPatientTreatments = (patientId) => {
                           <TableCell>{patient.gender}</TableCell>
                           <TableCell>{patient.contact}</TableCell>
                           <TableCell align="center">
-                            <Box sx={{ 
-                              display: 'flex', 
-                              flexDirection: 'row', 
-                              gap: 0.5,
-                              justifyContent: 'center'
-                            }}>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                sx={{ 
-                                  color: 'white', 
-mr: 1,
-                                }}
-                                onClick={() => {
-                                  setIsEditing(true);
-                                  setCurrentPatient({
-                                    id: patient.id,
-                                    name: patient.name,
-                                    age: patient.age,
-                                    gender: patient.gender,
-                                    contact: patient.contact
-                                  });
-                                  setShowModal(true);
-                                }}
-                              >
-                                Edit Info
-                              </Button>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                sx={{ 
-                                  color: 'white', 
-mr: 1,
-                                }}
-                                onClick={() => {
-                                  setCurrentPatient({
-                                    id: patient.id,
-                                    name: patient.name,
-                                    age: patient.age,
-                                    gender: patient.gender,
-                                    contact: patient.contact
-                                  });
-                                  // Reset treatments before loading new ones
-                                  setPatientTreatments([]);
-                                  setSelectedPatientDetails(null);
-                                  loadPatientHistory(patient.id);
-                                  loadPatientTreatments(patient.id);
-                                  setShowHistoryModal(true);
-                                }}
-                              >
-                                Edit History
-                              </Button>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                sx={{ 
-                                  color: 'white', 
-mr: 1,
-                                }}
-                                onClick={() => {
-                                  setCurrentPatient({
-                                    id: patient.id,
-                                    name: patient.name,
-                                    age: patient.age,
-                                    gender: patient.gender,
-                                    contact: patient.contact
-                                  });
-                                  setShowPrescriptionModal(true);
-                                }}
-                              >
-                                Order Prescription
-                              </Button>
-                            </Box>
-                          </TableCell>
+  <Box
+    sx={{
+      display: "flex",
+      flexDirection: "row",
+      gap: 0.5,
+      justifyContent: "center",
+    }}
+  >
+    <Button
+      variant="contained"
+      size="small"
+      sx={{
+        color: "white",
+        mr: 1,
+      }}
+      onClick={() => {
+        setIsEditing(true);
+        setCurrentPatient({
+          id: patient.id,
+          name: patient.name,
+          age: patient.age,
+          gender: patient.gender,
+          contact: patient.contact,
+        });
+        setShowModal(true);
+      }}
+    >
+      Edit Info
+    </Button>
+    <Button
+      variant="contained"
+      size="small"
+      sx={{
+        color: "white",
+        mr: 1,
+      }}
+      onClick={() => {
+        setCurrentPatient({
+          id: patient.id,
+          name: patient.name,
+          age: patient.age,
+          gender: patient.gender,
+          contact: patient.contact,
+        });
+        // Reset treatments before loading new ones
+        setPatientTreatments([]);
+        setSelectedPatientDetails(null);
+        loadPatientHistory(patient.id);
+        loadPatientTreatments(patient.id);
+        setShowHistoryModal(true);
+      }}
+    >
+      Edit History
+    </Button>
+    <Button
+      variant="contained"
+      size="small"
+      color="error"
+      onClick={() => handleDeletePatient(patient.id)}
+    >
+      Delete
+    </Button>
+  </Box>
+</TableCell>
                         </TableRow>
                       ))
                     ) : (
@@ -771,39 +730,7 @@ mr: 1,
                     </List>
                   </Box>
                   
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" gutterBottom>Prescriptions</Typography>
-                    <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
-                      <Table size="small" stickyHeader>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Date</TableCell>
-                            <TableCell>Medication</TableCell>
-                            <TableCell>Quantity</TableCell>
-                            <TableCell>Prescribed By</TableCell>
-                            <TableCell>Cost</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {selectedPatientDetails.prescriptions?.length > 0 ? (
-                            selectedPatientDetails.prescriptions.map((prescription, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{prescription.date}</TableCell>
-                                <TableCell>{prescription.medication_name}</TableCell>
-                                <TableCell>{prescription.quantity}</TableCell>
-                                <TableCell>{prescription.doctor_name}</TableCell>
-                                <TableCell>${prescription.cost?.toFixed(2) || "N/A"}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} align="center">No prescriptions available</TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
+            
                   
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>Treatment Notes</Typography>
