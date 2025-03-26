@@ -73,27 +73,65 @@ const usePatientData = () => {
       });
   };
 
-  // Functions to update patient list after CRUD operations
-  const addPatient = (newPatient) => {
-    const updatedList = [...patientList, {...newPatient, image: "Profile-Icon.png"}];
-    setPatientList(updatedList);
-    setFilteredPatients(updatedList);
+  const updatePatient = (updatedPatient) => {
+    return fetch(`http://127.0.0.1:5000/api/patients/update/${updatedPatient.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(updatedPatient),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to update patient");
+        return response.json();
+      })
+      .then((data) => {
+        // Update the patient in the list
+        const updatedList = patientList.map((patient) =>
+          patient.id === updatedPatient.id ? { ...patient, ...updatedPatient } : patient
+        );
+        setPatientList(updatedList);
+        setFilteredPatients(updatedList);
+        return data;
+      })
+      .catch((error) => {
+        console.error("Error updating patient:", error);
+        throw error;
+      });
   };
 
-  const updatePatient = (updatedPatient) => {
-    const updatedList = patientList.map(patient => 
-      patient.id === updatedPatient.id ? {
-        ...patient,
-        name: updatedPatient.name,
-        age: parseInt(updatedPatient.age),
-        gender: updatedPatient.gender,
-        contact: updatedPatient.contact
-      } : patient
-    );
-    
-    setPatientList(updatedList);
-    setFilteredPatients(updatedList);
-  };
+// Update the createPatient function to add the new patient to the state
+const addPatient = (patientData) => {
+  return fetch("http://127.0.0.1:5000/api/patients/add", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify(patientData),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error("Failed to add patient");
+      return response.json();
+    })
+    .then((data) => {
+      // Add the new patient to the list
+      const newPatient = {
+        id: data.id,
+        name: patientData.name,
+        age: parseInt(patientData.age),
+        gender: patientData.gender,
+        contact: patientData.contact,
+        image: "Profile-Icon.png", // Default image
+      };
+
+      const updatedList = [...patientList, newPatient];
+      setPatientList(updatedList);
+      setFilteredPatients(updatedList);
+      return data;
+    });
+};
 
   const deletePatient = (patientId) => {
     return fetch(`http://127.0.0.1:5000/api/patients/delete/${patientId}`, {
@@ -229,37 +267,6 @@ const usePatientData = () => {
       });
   };
 
-
-  // Create new patient
-  const createPatient = (patientData) => {
-    return fetch("http://127.0.0.1:5000/api/patients/add", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      },
-      body: JSON.stringify(patientData),
-    })
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to add patient");
-        return response.json();
-      })
-      .then(data => {
-        // Add the new patient to the list
-        const newPatient = {
-          id: data.id,
-          name: patientData.name,
-          age: parseInt(patientData.age),
-          gender: patientData.gender,
-          contact: patientData.contact,
-          image: "Profile-Icon.png" // Default image
-        };
-        
-        addPatient(newPatient);
-        return data;
-      });
-  };
-
   // Add treatment
   const addTreatment = (patientId, treatmentData) => {
     return fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
@@ -292,7 +299,7 @@ const usePatientData = () => {
       });
   };
 
-  const loadPatientTreatments = (patientId) => {
+  const fetchPatientTreatments = (patientId) => {
     fetch(`http://127.0.0.1:5000/api/patients/${patientId}/treatments`, {
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -347,11 +354,10 @@ const usePatientData = () => {
     // Details operations
     fetchPatientDetails,
     // Treatment operations
+    fetchPatientTreatments,
     addTreatment,
     updateTreatment,
     deleteTreatment,
-    // Patient submission
-    createPatient,
   };
 };
 

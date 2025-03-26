@@ -12,7 +12,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import useUserData from "../hooks/useUserData";
 import usePatientData from "../hooks/usePatientData";
-import useMedicalServices from "../hooks/useMedicalServices";
 import UserProfile from "./UserProfile";
 import "../styles/Inventory.css";
 
@@ -69,7 +68,7 @@ const PatientList = () => {
     filteredPatients, searchTerm, setSearchTerm,
     error: patientError, isLoading: patientLoading,
     updatePatient, deletePatient,
-    createPatient,
+    addPatient,
     fetchPatientHistory, addHistoryEntry,
     updateHistoryEntry, deleteHistoryEntry,
     fetchPatientDetails, addTreatment,
@@ -105,48 +104,69 @@ const PatientList = () => {
   const [patientTreatments, setPatientTreatments] = useState([]); 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+  
+    // Validate input fields
+    if (!currentPatient.name.trim() || !currentPatient.age || !currentPatient.gender || !currentPatient.contact.trim()) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+  
     if (isEditing) {
-      updatePatient({ 
+      // Update existing patient
+      updatePatient({
         id: currentPatient.id,
-        name: currentPatient.name,
+        name: currentPatient.name.trim(),
         age: parseInt(currentPatient.age),
         gender: currentPatient.gender,
-        contact: currentPatient.contact
+        contact: currentPatient.contact.trim(),
       })
-      .then(() => {
-        setShowModal(false);
-        alert("Patient updated successfully!");
-      })
-      .catch(error => {
-        console.error("Error updating patient:", error);
-        alert("Failed to update patient: " + error.message);
-      });
+        .then(() => {
+          alert("Patient updated successfully!");
+          setShowModal(false);
+          setCurrentPatient({
+            id: '',
+            name: '',
+            age: '',
+            gender: '',
+            contact: '',
+          });
+        })
+        .catch((error) => {
+          console.error("Error updating patient:", error);
+          alert("Failed to update patient: " + error.message);
+        });
     } else {
-      // Add new patient using hook
-      createPatient({ 
-        name: currentPatient.name,
+      // Add new patient
+      addPatient({
+        name: currentPatient.name.trim(),
         age: parseInt(currentPatient.age),
         gender: currentPatient.gender,
-        contact: currentPatient.contact
+        contact: currentPatient.contact.trim(),
       })
-      .then(() => {
-        setShowModal(false);
-        alert("New patient added successfully!");
-      })
-      .catch(error => {
-        console.error("Error adding patient:", error);
-        alert("Failed to add patient: " + error.message);
-      });
+        .then(() => {
+          alert("New patient added successfully!");
+          setShowModal(false);
+          setCurrentPatient({
+            id: '',
+            name: '',
+            age: '',
+            gender: '',
+            contact: '',
+          });
+        })
+        .catch((error) => {
+          console.error("Error adding patient:", error);
+          alert("Failed to add patient: " + error.message);
+        });
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCurrentPatient({
-      ...currentPatient,
-      [name]: value
-    });
+    setCurrentPatient((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleDeletePatient = (patientId) => {
@@ -253,7 +273,6 @@ const PatientList = () => {
     addTreatment(patientId, diagnosis, notes)
       .then(() => {
         alert("Treatment added successfully!");
-        // Refresh patient details to include the new treatment
         refreshPatientDetails(patientId);
       })
       .catch(error => {
@@ -604,78 +623,78 @@ const loadPatientTreatments = (patientId) => {
           
           {/* Add/Edit Patient Modal */}
           <Dialog 
-            open={showModal} 
-            onClose={() => setShowModal(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle>
-              {isEditing ? "Edit Patient Information" : "Register New Patient"}
-              <IconButton
-                aria-label="close"
-                onClick={() => setShowModal(false)}
-                sx={{ position: 'absolute', right: 8, top: 8 }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="name"
-                  label="Patient Name"
-                  name="name"
-                  autoFocus
-                  value={currentPatient.name || ''}
-                  onChange={handleInputChange}
-                />
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="age"
-                  label="Age"
-                  name="age"
-                  type="number"
-                  value={currentPatient.age || ''}
-                  onChange={handleInputChange}
-                />
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="gender-label">Gender</InputLabel>
-                  <Select
-                    labelId="gender-label"
-                    id="gender"
-                    name="gender"
-                    value={currentPatient.gender || ''}
-                    label="Gender"
-                    onChange={handleInputChange}
-                  >
-                    <MenuItem value="Male">Male</MenuItem>
-                    <MenuItem value="Female">Female</MenuItem>
-                    <MenuItem value="Other">Other</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="contact"
-                  label="Contact Number"
-                  name="contact"
-                  value={currentPatient.contact || ''}
-                  onChange={handleInputChange}
-                />
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleSubmit} color="primary" variant="contained">
-                {isEditing ? "Update Patient" : "Add Patient"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+  open={showModal} 
+  onClose={() => setShowModal(false)}
+  fullWidth
+  maxWidth="sm"
+>
+  <DialogTitle>
+    {isEditing ? "Edit Patient Information" : "Register New Patient"}
+    <IconButton
+      aria-label="close"
+      onClick={() => setShowModal(false)}
+      sx={{ position: 'absolute', right: 8, top: 8 }}
+    >
+      <CloseIcon />
+    </IconButton>
+  </DialogTitle>
+  <DialogContent dividers>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="name"
+        label="Patient Name"
+        name="name"
+        autoFocus
+        value={currentPatient.name || ''}
+        onChange={handleInputChange}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="age"
+        label="Age"
+        name="age"
+        type="number"
+        value={currentPatient.age || ''}
+        onChange={handleInputChange}
+      />
+      <FormControl fullWidth margin="normal">
+        <InputLabel id="gender-label">Gender</InputLabel>
+        <Select
+          labelId="gender-label"
+          id="gender"
+          name="gender"
+          value={currentPatient.gender || ''}
+          label="Gender"
+          onChange={handleInputChange}
+        >
+          <MenuItem value="Male">Male</MenuItem>
+          <MenuItem value="Female">Female</MenuItem>
+          <MenuItem value="Other">Other</MenuItem>
+        </Select>
+      </FormControl>
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="contact"
+        label="Contact Number"
+        name="contact"
+        value={currentPatient.contact || ''}
+        onChange={handleInputChange}
+      />
+    </Box>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={handleSubmit} color="primary" variant="contained">
+      {isEditing ? "Update Patient" : "Add Patient"}
+    </Button>
+  </DialogActions>
+</Dialog>
           
           {/* Patient Information Modal */}
           <Dialog 

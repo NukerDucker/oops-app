@@ -105,53 +105,35 @@ def add_patient():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-@patients_bp.route('/api/patients/update', methods=['PUT'])
+@patients_bp.route('/api/patients/update/<int:patient_id>', methods=['PUT'])
 @jwt_required()
-def update_patient():
+def update_patient(patient_id):
     current_username = get_jwt_identity()
     user = system_service.get_user_from_username(current_username)
     
-    # Simple authorization check
+    # Authorization check
     if not user or user.user_type not in ["admin", "receptionist", "doctor"]:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
+        return jsonify({"error": "Unauthorized access"}), 403
+
     data = request.json
-    patient_id = int(data.get('id'))
-    
     try:
-        # Find the patient using system
+        # Fetch the patient by ID
         patient = system_service.get_patient_from_id(patient_id)
-        
         if not patient:
-            return jsonify({'error': 'Patient not found'}), 404
-        
-        # Create updated patient
-        updated_patient = Patient(
-            data.get('name', patient.name),
-            int(data.get('age', patient.age)),
-            data.get('gender', patient.gender),
-            data.get('contact', patient.contact)
-        )
-        # Preserve the ID
-        updated_patient.id = patient_id
-        
-        # Update internal lists/properties from the old patient
-        updated_patient._history = patient._history.copy()
-        updated_patient._prescriptions = patient._prescriptions.copy()
-        updated_patient._medications = patient._medications.copy()
-        updated_patient._fees = patient._fees.copy()
-        updated_patient._treatments = patient._treatments.copy()
-        
-        # Update in system
-        # We need to implement this method in the System class if it doesn't exist
-        system_service._patients[patient_id] = updated_patient
-        
-        return jsonify({
-            'message': 'Patient updated successfully'
-        }), 200
-        
+            return jsonify({"error": "Patient not found"}), 404
+
+        # Update patient details
+        patient.name = data.get("name", patient.name)
+        patient.age = data.get("age", patient.age)
+        patient.gender = data.get("gender", patient.gender)
+        patient.contact = data.get("contact", patient.contact)
+
+        # Save changes to the system
+        system_service.update_patient(patient)
+
+        return jsonify({"message": "Patient updated successfully", "patient": patient.get_report_data()}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 @patients_bp.route('/api/patients/delete/<int:patient_id>', methods=['DELETE'])
 @jwt_required()
